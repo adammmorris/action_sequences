@@ -2,7 +2,7 @@
 numAgents = 1;
 numRounds = 125;
 MF_generalizes = 0;
-whichEnv = 'env/env_1b';
+whichEnv = 'env/env_1b.mat';
 whichModel = 'fitting/1b/test';
 debug = 0;
 
@@ -26,7 +26,7 @@ for thisSubj = 1:numAgents
     actualParams(thisSubj,:) = [lr temp1 temp2 stay w_MB w_MB_AS use_AS MF_generalizes];
 end
 
-load(strcat(whichEnv, '.mat'));
+load(whichEnv);
 results_all = model(envInfo, actualParams, numRounds, debug);
 
 %% Get earnings

@@ -52,7 +52,7 @@ lik = zeros(numStarts, 1);
 %% Start!
 options = psoptimset('CompleteSearch', 'on', 'SearchMethod', {@searchlhs});
 
-load(strcat(whichEnv, '.mat'));
+load(whichEnv);
 
 for thisStart = 1:numStarts
     if whichSubj < length(subjMarkers)
