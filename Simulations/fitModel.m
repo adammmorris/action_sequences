@@ -17,7 +17,7 @@
 %   Note that use_AS must be fixed. If it is fixed to 0, w_MB_AS should
 %   also be fixed (doesn't matter to what value).
 
-function fitModel(dataPath, whichEnv, savePath, numStarts, whichSubj, fixedParams)
+function fitModel(dataPath, whichEnv, savePath, numStarts, whichSubj, fixedParams, priorPDFs)
 %% Load data
 load(dataPath);
 
@@ -42,31 +42,46 @@ bounds = [0 0 0 0 0 0 0; 1 2 2 2 1 1 1];
     
 % Calculate starts
 starts = zeros(numStarts, numFreeParams);
+bounds_fp = bounds(:, freeParams);
 for i = 1:numFreeParams
-    starts(:,i) = linspace(bounds(1,i),bounds(2,i),numStarts);
+    ub = bounds_fp(2,i);
+    lb = bounds_fp(1,i);
+    starts(:,i) = rand(numStarts, 1) * (ub-lb) + lb;
 end
-
-optParams = zeros(numStarts, numFreeParams);
-lik = zeros(numStarts, 1);
 
 %% Start!
-options = psoptimset('CompleteSearch', 'on', 'SearchMethod', {@searchlhs});
-
 load(whichEnv);
 
-for thisStart = 1:numStarts
-    if whichSubj < length(subjMarkers)
-        index = subjMarkers(whichSubj):(subjMarkers(whichSubj + 1) - 1);
-    else
-        index = subjMarkers(whichSubj):size(results, 1);
-    end
-    
-    [optParams(thisStart, :), lik(thisStart), ~] = ...
-        patternsearch(@(params) likelihood(envInfo, results(index, :), params, fixedParams), ...
-        starts(thisStart, :), [], [], [], [], ...
-        bounds(1, freeParams), bounds(2, freeParams), options);
+options = optimoptions(@fmincon, 'Display', 'off', 'UseParallel', false);
+options_unc = optimoptions(@fminunc, 'Display', 'Off', 'Algorithm', 'quasi-newton', 'MaxFunEvals', 0);
+
+if whichSubj < length(subjMarkers)
+    index = subjMarkers(whichSubj):(subjMarkers(whichSubj + 1) - 1);
+else
+    index = subjMarkers(whichSubj):size(results, 1);
 end
 
-[~, bestStart] = min(lik);
-csvwrite([savePath 'Params_Subj' num2str(whichSubj) '.txt'], [lik(bestStart) optParams(bestStart, :)]);
+f = @(params) -posterior(envInfo, results(index, :), params, fixedParams, priorPDFs);
+
+logposts_starts = zeros(numStarts, 1);
+params_starts = zeros(numStarts, numFreeParams);
+
+parfor thisStart = 1:numStarts
+    [params_starts(thisStart, :), logposts_starts(thisStart), ~, ~, ~, ~] = ...
+        fmincon(f, starts(thisStart, :), [], [], [], [], ...
+        bounds(1, freeParams), bounds(2, freeParams), [], options);
 end
+
+[~, bestStart] = min(logposts_starts);
+post = -logposts_starts(bestStart);
+optParams = params_starts(bestStart, :);
+
+[~, ~, ~, ~, ~, hessian] = fminunc(f, optParams, options_unc);
+lme = numFreeParams / 2 * log(2*pi) + post - .5 * log(det(hessian));
+
+ll = likelihood(envInfo, results(index, :), optParams, fixedParams);
+if isnan(lme) || ~isreal(lme) % resort to BIC
+    lme = -0.5 * (numFreeParams * (log(length(index)) - log(2*pi)) - 2 * ll);
+end
+
+csvwrite([savePath num2str(whichSubj) '.txt'], [post, ll, lme, optParams]);

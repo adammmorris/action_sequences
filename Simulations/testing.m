@@ -1,0 +1,6 @@
+% [lr temp1 temp2 stay w_MB w_MB_AS use_AS]
+priorPDFs = {@(x) log(betapdf(x, .195, .479)), @(x) log(gampdf(x, 2.52, 1.34)), ...
+    @(x) log(gampdf(x, 2.52, 1.34)), @(x) log(normpdf(x, .12, 1.26)), ...
+    @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
+
+fitModel('fitting/2step/v1/data.mat', 'env/env_db.mat', '', 1, 10, [-1, -1, -1, -1, -1, -1, 1], priorPDFs);

@@ -11,7 +11,7 @@
 numAgents_max = 1000;
 numRounds_max = 250;
 
-whichEnv = 'env_1b';
+whichEnv = 'env_db';
 
 %% Set up states/actions
 
@@ -36,11 +36,16 @@ elseif strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_db_probs') || strcmp(
     % For every sequence index in S1 (rows), gives the appropriate action for every stage
     % (columns). Zero indicates that the sequence has ended.
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];
-elseif strcmp(whichEnv, 'env_1b')
+elseif strcmp(whichEnv, 'env_1b') || strcmp(whichEnv, 'env_1b_zeros')
     states = {1, 2:4, 5:10};
     actions = {1:6, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0};
     sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];
+elseif strcmp(whichEnv, 'env_1b_fix')
+    states = {1, 2:4, 5:9};
+    actions = {1:6, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0};
+    sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];    
 end
 
 numStates = max([states{:}]);
@@ -71,7 +76,7 @@ if strcmp(whichEnv, 'env_det')
     unlikelyTransition(1, 1) = 3;
     unlikelyTransition(1, 2) = 2;
 elseif strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_db_probs') || strcmp(whichEnv, 'env_db_continuous')
-    transitionProb = .75;
+    transitionProb = .8;
 
     likelyTransition(1, 1) = 2; % actions
     likelyTransition(1, 2) = 3;
@@ -88,8 +93,8 @@ elseif strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_db_probs') || strcmp(
     unlikelyTransition(1, 4) = 7;
     unlikelyTransition(1, 5) = 4;
     unlikelyTransition(1, 6) = 5;
-elseif strcmp(whichEnv, 'env_1b')
-    transitionProb = .75;
+elseif strcmp(whichEnv, 'env_1b') || strcmp(whichEnv, 'env_1b_zeros')
+    transitionProb = .8;
     
     likelyTransition(1, 1) = 2; % actions
     likelyTransition(1, 2) = 3;
@@ -107,6 +112,25 @@ elseif strcmp(whichEnv, 'env_1b')
     unlikelyTransition(1, 4) = 10;
     unlikelyTransition(1, 5) = 9;
     unlikelyTransition(1, 6) = 10;
+elseif strcmp(whichEnv, 'env_1b_fix')
+    transitionProb = .8;
+    
+    likelyTransition(1, 1) = 2; % actions
+    likelyTransition(1, 2) = 3;
+    likelyTransition(1, 3) = 5; % sequences
+    likelyTransition(1, 4) = 6;
+    likelyTransition(1, 5) = 7;
+    likelyTransition(1, 6) = 8;
+    likelyTransition(2, actions{2}) = [5 6];
+    likelyTransition(3, actions{3}) = [7 8];
+    likelyTransition(4, actions{4}) = [9 9];
+
+    unlikelyTransition(1, 1) = 4;
+    unlikelyTransition(1, 2) = 4;
+    unlikelyTransition(1, 3) = 9;
+    unlikelyTransition(1, 4) = 9;
+    unlikelyTransition(1, 5) = 9;
+    unlikelyTransition(1, 6) = 9;
 end
 
 % Transition prob matrix
@@ -126,7 +150,7 @@ end
 %% Rewards
 rewardStates = states{3};
 rewards = zeros(numRounds_max, numStates, numAgents_max);
-if strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_det') || strcmp(whichEnv, 'env_1b')
+if strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_det') || strcmp(whichEnv, 'env_1b') 
     stdShift = 2;
     rewardRange_hi = 5;
     rewardRange_lo = -5;
@@ -139,6 +163,23 @@ if strcmp(whichEnv, 'env_db') || strcmp(whichEnv, 'env_det') || strcmp(whichEnv,
             re = rewards(thisRound, rewardStates, thisAgent) + round(randn(length(rewardStates), 1)' * stdShift);
             re(re > rewardRange_hi) = 2 * rewardRange_hi - re(re > rewardRange_hi);
             re(re < rewardRange_lo) = 2 * rewardRange_lo - re(re < rewardRange_lo);
+            rewards(thisRound + 1, rewardStates, thisAgent) = re;
+        end
+    end
+elseif strcmp(whichEnv, 'env_1b_zeros') || strcmp(whichEnv, 'env_1b_fix')
+    stdShift = 2;
+    rewardRange_hi = 5;
+    rewardRange_lo = -5;
+    rewardsAreProbs = 0;
+    
+    for thisAgent = 1:numAgents_max
+        rewards(1, rewardStates, thisAgent) = randsample(rewardRange_lo : rewardRange_hi, length(rewardStates), true);
+
+        for thisRound = 1:(numRounds_max - 1)
+            re = rewards(thisRound, rewardStates, thisAgent) + round(randn(length(rewardStates), 1)' * stdShift);
+            re(re > rewardRange_hi) = 2 * rewardRange_hi - re(re > rewardRange_hi);
+            re(re < rewardRange_lo) = 2 * rewardRange_lo - re(re < rewardRange_lo);
+            re(abs(re) == 1) = 0;
             rewards(thisRound + 1, rewardStates, thisAgent) = re;
         end
     end

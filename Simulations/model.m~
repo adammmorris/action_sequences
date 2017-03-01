@@ -13,7 +13,7 @@
 % debug: output debugging info?
 
 %% Outputs
-% results: [A1 S2 A2 Re subjectId]
+% results: [A1 S2 A2 RT2 Re subjectId]
 
 %% Notes
 % In the terminology here, 'choice' can refer to either an action or a
@@ -44,7 +44,7 @@ numActions = max([actions{:}]);
 %% Loop through agents
 numAgents = size(params, 1);
 
-results = zeros(numAgents * numRounds, 6);
+results = zeros(numAgents * numRounds, 7);
 result_counter = 1;
 
 agentNumbers = randsample(numAgents_max, numAgents)';
@@ -89,26 +89,38 @@ for thisAgent = 1:numAgents
         S1_actions(S1_seqs) = [];
         
         % MB (for both actions & sequences)
-        for a1 = S1_actions
-            Q_MB(S1, a1) = 0;
-            % Loop through subsequent states
-            for nextState = S2s
-                    Q_MB(S1, a1) = Q_MB(S1, a1) + transition_probs(S1, a1, nextState) * ...
-                        max(permute(transition_probs(nextState, actions{nextState}, S3s), [2 3 1]) *...
-                        Q_MB(S3s, 1));
+        % This is a bit gimmicky. Proper way would be to loop through every
+        % possible next state, and check whether it's an S2 or S3. But,
+        % since all of our tasks have actions that go to S2 and sequences
+        % that go to S3, we can do it this way for speed.
+        Q_MB(S1, S1_choices) = 0;
+        if w_MB > 0
+            for a1 = S1_actions
+                % Loop through subsequent states
+                for nextState = S2s
+                        Q_MB(S1, a1) = Q_MB(S1, a1) + transition_probs(S1, a1, nextState) * ...
+                            max(permute(transition_probs(nextState, actions{nextState}, S3s), [2 3 1]) *...
+                            Q_MB(S3s, 1));
+                end
             end
-    end
+            for a1 = S1_seqs
+                for nextState = S3s
+                    Q_MB(S1, a1) = Q_MB(S1, a1) + transition_probs(S1, a1, nextState) * Q_MB(nextState, 1);
+                end
+            end
+        end
         
         
         % Combine Q vals
         Q_weighted = zeros(1, length(S1_choices));
         if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
+        else Q_weighted(S1_seqs) = -Inf;
         end
         Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
         
         % Choose action
         weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastChoice1);
-        if ~use_AS, weighted_vals(S1_seqs) = -Inf; end
+        %if ~use_AS, weighted_vals(S1_seqs) = -Inf; end
         probs = exp(weighted_vals) / sum(exp(weighted_vals));
         choice1 = S1_choices(fastrandsample(probs, 1));
         
@@ -189,6 +201,8 @@ for thisAgent = 1:numAgents
             
             % Update
             Q_MF(S1, choice1) = Q_MF(S1, choice1) + lr * (reward - Q_MF(S1, choice1));
+            
+            RT2 = 
         end
         
         % Update likelihood
@@ -201,7 +215,7 @@ for thisAgent = 1:numAgents
         lastChoice2 = choice2;
         
         %% Record results
-        results(result_counter, :) = [action1 S2 choice2 reward agentNum thisRound];
+        results(result_counter, :) = [action1 S2 choice2 RT2 reward agentNum thisRound];
         if debug
             disp({'A1', 'S2', 'A2', 'Re', 'Subj', 'Round'});
             disp(results(result_counter, :));

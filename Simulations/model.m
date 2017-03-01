@@ -13,7 +13,7 @@
 % debug: output debugging info?
 
 %% Outputs
-% results: [A1 S2 A2 Re subjectId]
+% results: [A1 S2 A2 RT2 Re subjectId]
 
 %% Notes
 % In the terminology here, 'choice' can refer to either an action or a
@@ -44,7 +44,7 @@ numActions = max([actions{:}]);
 %% Loop through agents
 numAgents = size(params, 1);
 
-results = zeros(numAgents * numRounds, 6);
+results = zeros(numAgents * numRounds, 7);
 result_counter = 1;
 
 agentNumbers = randsample(numAgents_max, numAgents)';
@@ -58,6 +58,7 @@ for thisAgent = 1:numAgents
     temp2 = params(thisAgent, 3);
     stay = params(thisAgent, 4);
     elig = 1;
+    rt_cost_nonseq = 1;
     
     % Weights
     w_MB = params(thisAgent, 5); % % of non-AS valuation done in MB way
@@ -114,12 +115,13 @@ for thisAgent = 1:numAgents
         % Combine Q vals
         Q_weighted = zeros(1, length(S1_choices));
         if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
+        else Q_weighted(S1_seqs) = -Inf;
         end
         Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
         
         % Choose action
         weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastChoice1);
-        if ~use_AS, weighted_vals(S1_seqs) = -Inf; end
+        %if ~use_AS, weighted_vals(S1_seqs) = -Inf; end
         probs = exp(weighted_vals) / sum(exp(weighted_vals));
         choice1 = S1_choices(fastrandsample(probs, 1));
         
@@ -178,6 +180,8 @@ for thisAgent = 1:numAgents
             executedSeq = find(sequences_def(:, 1) == choice1 & sequences_def(:,2) == choice2);
             Q_MF(S1, executedSeq) = Q_MF(S1, executedSeq) + lr * (reward - Q_MF(S1, executedSeq));
             
+            RT2 = rt_cost_nonseq;
+            
         %% If we chose a sequence..
         elseif any(choice1 == S1_seqs)
             % Get actions for this sequence
@@ -200,6 +204,8 @@ for thisAgent = 1:numAgents
             
             % Update
             Q_MF(S1, choice1) = Q_MF(S1, choice1) + lr * (reward - Q_MF(S1, choice1));
+            
+            RT2 = 0;
         end
         
         % Update likelihood
@@ -212,9 +218,9 @@ for thisAgent = 1:numAgents
         lastChoice2 = choice2;
         
         %% Record results
-        results(result_counter, :) = [action1 S2 choice2 reward agentNum thisRound];
+        results(result_counter, :) = [action1 S2 choice2 RT2 reward agentNum thisRound];
         if debug
-            disp({'A1', 'S2', 'A2', 'Re', 'Subj', 'Round'});
+            disp({'A1', 'S2', 'A2', 'RT2', 'Re', 'Subj', 'Round'});
             disp(results(result_counter, :));
         end
         result_counter = result_counter + 1;

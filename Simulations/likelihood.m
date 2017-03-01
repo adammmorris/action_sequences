@@ -91,7 +91,7 @@ for thisRound=1:numRounds
         
         if use_AS > 0 && w_MB_AS > 0
             for a1 = S1_seqs
-                if any(nextState == S3s) % if it's a stage 3 state (i.e. from a sequence), skip S2
+                for nextState = S3s % if it's a stage 3 state (i.e. from a sequence), skip S2
                     Q_MB(S1, a1) = Q_MB(S1, a1) + transition_probs(S1, a1, nextState) * Q_MB(nextState, 1);
                 end
             end
@@ -170,7 +170,7 @@ for thisRound=1:numRounds
         probA2_givenChoice1 = [probs2(possibleA2) 1];
         
         % Therefore...
-        actualProb(possibleA2) = sum(probA2_givenChoice1 .* probs1(viableS1choices) / denom);
+        actualProb(possibleA2_ind) = sum(probA2_givenChoice1 .* probs1(viableS1choices) / denom);
     end
     
     likelihood = likelihood + log(actualProb(action2));
@@ -197,5 +197,3 @@ for thisRound=1:numRounds
     lastAction1 = action1;
     lastAction2 = action2;
 end
-
-likelihood = -likelihood;

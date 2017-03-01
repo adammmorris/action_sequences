@@ -1,0 +1,2 @@
+First suffix is the low-level controller: MB if MB only, MF if MF only, and MFMB if mixture of both.
+Second suffix is the AS controller: MB if MB only, MF if MF only, MFMB if mixture of both, and noAS if neither.
