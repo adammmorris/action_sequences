@@ -66,7 +66,7 @@ f = @(params) -posterior(envInfo, results(index, :), params, fixedParams, priorP
 logposts_starts = zeros(numStarts, 1);
 params_starts = zeros(numStarts, numFreeParams);
 
-parfor thisStart = 1:numStarts
+for thisStart = 1:numStarts
     [params_starts(thisStart, :), logposts_starts(thisStart)] = ...
         fmincon(f, starts(thisStart, :), [], [], [], [], ...
         bounds(1, freeParams), bounds(2, freeParams), []);

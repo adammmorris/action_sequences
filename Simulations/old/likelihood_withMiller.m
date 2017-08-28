@@ -58,9 +58,14 @@ w_MF_AS = 1 - w_MB_AS; % % done in MF way
 use_AS = params(7); % relative weighting on action sequences
 
 lr_trans = params(8);
+lr_miller = params(9);
 
 Q_MB = zeros(numStates, numActions);
 Q_MF = zeros(numStates, numActions);
+Q_H = zeros(numStates, numActions);
+
+rg = 0;
+rzero = 0;
 
 if extremeRep
     for k = 1:length(states{3})
@@ -112,12 +117,19 @@ for thisRound=1:numRounds
     end
     
     Q_weighted = zeros(1, length(S1_choices));
-    
-    if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
-    else Q_weighted(S1_seqs) = -Inf;
+    if lr_miller > 0
+        probs_goalcontroller = 1 / (1 + exp(w_MB_AS * mean(Q_H(S1,:) .^ 2) - w_MB * (rg - rzero) ^ 2));
+        
+        Q_weighted(S1_actions) = Q_MB(S1, S1_actions) * probs_goalcontroller + ...
+            Q_H(S1, S1_actions) * (1 - probs_goalcontroller);
+        weighted_vals = temp1 * Q_weighted;
+    else
+        if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
+        else Q_weighted(S1_seqs) = -Inf;
+        end
+        Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
+        weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastAction1);
     end
-    Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
-    weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastAction1);
     
     % Get action
     action1 = results(thisRound, 1);
@@ -140,51 +152,63 @@ for thisRound=1:numRounds
         Q_MB(S2, S2_choices) = permute(transition_probs(S2, S2_choices, S3s), [2 3 1]) * Q_MB(S3s, 1);
     end
     
+    
     % Get action
     action2 = results(thisRound, 3);
     
-    % Combine Q vals
-    Q_weighted = w_MB * Q_MB(S2, S2_choices) + w_MF * Q_MF(S2, S2_choices);
-    
-    probs2 = exp(temp2 * Q_weighted + stay * (S2_choices == lastAction2)) / ...
-        sum(exp(temp2 * Q_weighted + stay * (S2_choices == lastAction2)));
-    
-    % This is tricky. We need to calculate the probability of each action2,
-    % including sequences.
-    actualProb = zeros(length(S2_choices), 1);
-    
-    % To do that, we decompose p(action2 | action1) into
-    % sum(p(action2 | choice1, action1) * p(choice1 | action1)), or
-    % sum(p(action2 | choice1) * p(action1 | choice1) * p(choice1) /
-    %   sum(p(action1 | choice1) * p(choice1))).
-    
-    % Let's start by calculating that denominator.
-    % p(action1 | choice1) is 1 for (a) the choice1 == action1 and
-    % (b) any sequences involving action1.
-    % Therefore...
-    denom = sum(probs1(S1_choices == action1 | (sequences_def(:,1) == action1)'));
-    
-    % Now, we loop through possible A2s
-    for possibleA2_ind = 1:length(S2_choices)
-        possibleA2 = S2_choices(possibleA2_ind);
+    if lr_miller > 0
+        Q_weighted(S2_choices) = Q_MB(S2, S2_choices) * probs_goalcontroller + ...
+            Q_H(S2, S2_choices) * (1 - probs_goalcontroller);
+        weighted_vals = temp2 * Q_weighted;
+        probs2 = exp(weighted_vals) / sum(exp(weighted_vals));
+        likelihood = likelihood + log(probs2(action2));
+    else
+        % Combine Q vals
+        Q_weighted = w_MB * Q_MB(S2, S2_choices) + w_MF * Q_MF(S2, S2_choices);
         
-        % There's two choice1's to consider, action1 itself and the
-        % sequence of [action1 action2].
-        viableS1choices = [find(S1_choices == action1) ...
-            find(sequences_def(:,1) == action1 & sequences_def(:, 2) == possibleA2)];
+        probs2 = exp(temp2 * Q_weighted + stay * (S2_choices == lastAction2)) / ...
+            sum(exp(temp2 * Q_weighted + stay * (S2_choices == lastAction2)));
         
-        % We need three values for each viable S1 choice,
-        % p(action2 | choice1), p(action1 | choice1), and p(choice1).
-        % p(action1 | choice1) is 1 for both of these.
-        % p(choice1) is just given by probs1.
-        % That leaves...
-        probA2_givenChoice1 = [probs2(possibleA2) 1];
+        % This is tricky. We need to calculate the probability of each action2,
+        % including sequences.
+        actualProb = zeros(length(S2_choices), 1);
         
+        % To do that, we decompose p(action2 | action1) into
+        % sum(p(action2 | choice1, action1) * p(choice1 | action1)), or
+        % sum(p(action2 | choice1) * p(action1 | choice1) * p(choice1) /
+        %   sum(p(action1 | choice1) * p(choice1))).
+        
+        % Let's start by calculating that denominator.
+        % p(action1 | choice1) is 1 for (a) the choice1 == action1 and
+        % (b) any sequences involving action1.
         % Therefore...
-        actualProb(possibleA2_ind) = sum(probA2_givenChoice1 .* probs1(viableS1choices) / denom);
+        denom = sum(probs1(S1_choices == action1 | (sequences_def(:,1) == action1)'));
+        
+        % Now, we loop through possible A2s
+        for possibleA2_ind = 1:length(S2_choices)
+            possibleA2 = S2_choices(possibleA2_ind);
+            
+            % There's two choice1's to consider, action1 itself and the
+            % sequence of [action1 action2].
+            viableS1choices = [find(S1_choices == action1) ...
+                find(sequences_def(:,1) == action1 & sequences_def(:, 2) == possibleA2)];
+            
+            % We need three values for each viable S1 choice,
+            % p(action2 | choice1), p(action1 | choice1), and p(choice1).
+            % p(action1 | choice1) is 1 for both of these.
+            % p(choice1) is just given by probs1.
+            % That leaves...
+            probA2_givenChoice1 = [probs2(possibleA2) 1];
+            
+            % Therefore...
+            actualProb(possibleA2_ind) = sum(probA2_givenChoice1 .* probs1(viableS1choices) / denom);
+        end
+        
+        likelihood = likelihood + log(actualProb(action2));
     end
     
-    likelihood = likelihood + log(actualProb(action2));
+    %% Update stage 2 likelihood
+    % Get the probability of the low-level actions
     
     %% Finish Stage 2
     reward_normed = rewards_normed(thisRound);
@@ -230,6 +254,19 @@ for thisRound=1:numRounds
         transition_probs(S1, action1, :) = transition_probs(S1, action1, :) / ...
             sum(transition_probs(S1, action1, :));
     end
+    
+    % Update Miller's habits
+    Q_H(S1, action1) = Q_H(S1, action1) + lr_miller * (1 - Q_H(S1, action1));
+    others = setdiff(actions{S1}, action1);
+    Q_H(S1, others) = Q_H(S1, others) + lr_miller * (0 - Q_H(S1, others));
+    
+    % Second choice
+    Q_H(S2, action2) = Q_H(S2, action2) + lr_miller * (1 - Q_H(S2, action2));
+    others = setdiff(actions{S2}, action2);
+    Q_H(S2, others) = Q_H(S2, others) + lr_miller * (0 - Q_H(S2, others));
+    
+    rg = rg + probs_goalcontroller * lr * (reward_normed - rg);
+    rzero = rzero + lr * (reward_normed - rzero);
     
     lastAction1 = action1;
     lastAction2 = action2;
