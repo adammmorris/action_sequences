@@ -2,6 +2,7 @@ require(dplyr)
 require(ggplot2)
 require(lme4)
 require(lmerTest)
+require(RColorBrewer)
 
 setwd('/Users/adam/Me/Psychology/Projects/Dezfouli/git')
 
@@ -11,16 +12,17 @@ dodge <- position_dodge(width=0.9)
 #----- Setup -----#
 real <- T
 if (real) {
-  df <- read.csv('Behavioral/dez_2step/v1/data.csv') %>% tbl_df
+  df <- read.csv('Behavioral/2step/v1/data.csv') %>% tbl_df
 } else {
-  df <- read.csv('Simulations/data/twostep/sims_MFMB_MB.csv') %>% tbl_df
+  df <- read.csv('Simulations/data/2step/sims_MB_MB.csv') %>% tbl_df
 }
 
 ## Exclusion
 if (real) {
-  df.demo <- read.csv('Behavioral/dez_2step/v1/data_demo.csv')
+  df.demo <- read.csv('Behavioral/2step/v1/data_demo.csv')
   exclude.subj <- df.demo$subject[(df.demo$reading_time / 60000) < 1]
   df <- df %>% filter(!(df$subject %in% exclude.subj))
+  df.demo.exclude = df.demo %>% filter(!(df.demo$subject %in% exclude.subj))
 }
 
 # Do any special things you need to do for this data set
@@ -81,13 +83,23 @@ df.agg <- df.bysubj %>%
 
 ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill = last.common)) +
   geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "")) +
-  labs(x = "", y = "Prob of repeating action 1")
+  geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge, colour = "white") +
+  guides(fill = F) +
+  labs(x = "", y = "") +
+  coord_cartesian(ylim=c(0, 1)) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        panel.background = element_rect(colour = "black", fill = "black"),
+        panel.grid = element_blank())
 
 # Models
-#model.daw.mm <- glmer(stay1 ~ last.reinf.fac * last.common + (1 + last.reinf.fac * last.common | subject), family = binomial,
-#                   data = df.crits)
+model.daw.mm <- glmer(stay1 ~ last.reinf.fac * last.common + (1 + last.reinf.fac * last.common | subject),
+                      family = binomial, data = df.crits %>% filter(last.reinf.fac != '0'))
+model.daw.mm.null <- glmer(stay1 ~ last.reinf.fac + last.common + (1 + last.reinf.fac * last.common | subject), family = binomial,
+                           data = df.crits %>% filter(last.reinf.fac != '0'))
+model.daw.mm.null2 <- glmer(stay1 ~ last.reinf.fac:last.common + last.common + (1 + last.reinf.fac * last.common | subject), family = binomial,
+                           data = df.crits %>% filter(last.reinf.fac != '0'))
+anova(model.daw.mm, model.daw.mm.null)
+anova(model.daw.mm, model.daw.mm.null2)
 model.daw <- lm(stay1 ~ last.reinf.fac * last.common, data = df.bysubj,
                  contrasts = list(last.reinf.fac = contr.sum, last.common = contr.sum))
 summary(model.daw)
@@ -104,11 +116,23 @@ df.agg <- df.bysubj %>%
 
 ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill = last.reinf.fac)) +
   geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Last reinforcement")) +
-  labs(x = "", y = "Prob of repeating action 2")
+  #geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
+  guides(fill = F) +
+  labs(x = "", y = "") +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA, size = 2)) +
+  scale_fill_manual(values = c("+" = "#00cc00", "-" = "red"))
 
 # Model
+model.test3.mm <- glmer(stay2 ~ last.reinf.fac * stay1.fac + (1 + last.reinf.fac * stay1.fac | subject),
+                      family = binomial, data = df.crits)
+model.test3.mm.null <- glmer(stay2 ~ last.reinf.fac + stay1.fac + (1 + last.reinf.fac * stay1.fac | subject), family = binomial,
+                           data = df.crits)
+model.test3.mm.null2 <- glmer(stay2 ~ last.reinf.fac:stay1.fac + stay1.fac + (1 + last.reinf.fac * stay1.fac | subject), family = binomial,
+                            data = df.crits)
+anova(model.daw.mm, model.daw.mm.null)
+anova(model.daw.mm, model.daw.mm.null2)
 model.test3 <- lm(stay2 ~ stay1.fac * last.reinf.fac, data = df.bysubj, 
                   contrasts = list(last.reinf.fac = contr.sum, stay1.fac = contr.sum))
 summary(model.test3)
@@ -126,7 +150,7 @@ df.agg <- df.bysubj %>%
 ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill = last.reinf.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Last reinforcement")) +
+  guides(fill = guide_legend(title = "")) +
   labs(x = "", y = "Prob of repeating action 2")
 
 # Model

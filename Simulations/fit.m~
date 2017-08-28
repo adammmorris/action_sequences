@@ -1,0 +1,3 @@
+datapath = 'fitting/1b_fix/real2';
+env
+fitModel(

@@ -7,13 +7,14 @@ se <- function(x) {sd(x) / sqrt(length(x))};
 dodge <- position_dodge(width=0.9)
 
 #----- Setup -----#
-real <- F
+real <- T
+stem = 'Behavioral/1b_fix/v2/real/'
 
 if (real) {
-  df <- read.csv('Behavioral/dez_1b_fix/v1/data.csv') %>% tbl_df
-  df.demo <- read.csv('Behavioral/dez_1b_fix/v1/data_demo.csv')
+  df <- read.csv(paste0(stem, 'data.csv')) %>% tbl_df
+  df.demo <- read.csv(paste0(stem, 'demo.csv'))
 } else {
-  df <- read.csv('Simulations/data/1b_fix/sims_MFMB_MB.csv') %>% tbl_df
+  df <- read.csv('Simulations/data/1b_fix_extreme/sims_MB_MB.csv') %>% tbl_df
 }
 df <- df %>% arrange(subject)
 df$subject <- trimws(as.character(df$subject))
@@ -33,7 +34,8 @@ if (real) {
       stay2.fac = factor(Action2 == lag(Action2), c(T, F), c("Same action2", "Different action2")),
       last.reinf = lag(Re),
       last.reinf.fac = factor(ifelse(lag(Re) == 0, 0, ifelse(lag(Re) > 0, 1, -1)), c(1, 0, -1), c("+", "0", "-")),
-      last.reinf.abs = abs(lag(Re))
+      last.reinf.abs = abs(lag(Re)),
+      subject_id = as.numeric(as.factor(subject))
     ) %>%
     filter(practice != 1 & timeouts == 0)
 } else {
@@ -54,8 +56,10 @@ if (real) {
 
 # Exclusion
 if (real) {
+  exclude.subj = c()
+  
   # people who glitched
-  exclude.subj <- c('AY1UTM5SDLH52', 'A4BKCA4S49HU', 'ANV8C2DATCAPB', 'ASTR3EPUOKEXV', 'A87D3K9YVKTQ7', 'A87D3K9YVKTQ7', 'A1PUHCEBSOWETV', 'A2TNZ0EUJZ5NK2')
+  #exclude.subj <- c('AY1UTM5SDLH52', 'A4BKCA4S49HU', 'ANV8C2DATCAPB', 'ASTR3EPUOKEXV', 'A87D3K9YVKTQ7', 'A87D3K9YVKTQ7', 'A1PUHCEBSOWETV', 'A2TNZ0EUJZ5NK2')
   
   # people who didn't read the instructions
   exclude.subj <- c(exclude.subj, df.demo$subject[(df.demo$reading_time / 60000) < 1])
@@ -70,8 +74,11 @@ if (real) {
 
   # people who failed critical checks (or never got to submit demo)
   exclude.subj <- c(exclude.subj, setdiff(df$subject, df.demo$subject))
-  exclude.subj <- c(exclude.subj, df.demo$subject[df.demo$check1 != 0 | df.demo$check2 != 1 | df.demo$check3 != 2 |
-                                                    df.demo$belief2 != 0 | df.demo$belief3 != 0])
+  
+  df.demo = df.demo %>% mutate(numFailedChecks = (check1 != 0)+(check2 != 1)+ (check3 != 2))
+  #exclude.subj <- c(exclude.subj, df.demo$subject[df.demo$check1 != 0 | df.demo$check2 != 1 | df.demo$check3 != 2 |
+  #                                                  df.demo$belief2 != 0 | df.demo$belief3 != 0])
+  exclude.subj = c(exclude.subj, df.demo$subject[df.demo$belief2 != 0 | df.demo$belief3 != 0 | df.demo$numFailedChecks > 1])
   
   df.crits <- df.crits %>% filter(!(df.crits$subject %in% exclude.subj))
 }
@@ -105,8 +112,11 @@ df.agg <- df.bysubj %>%
 ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, fill = last.reinf.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "")) +
-  labs(x = "", y = "Prob of repeating action 1")
+  guides(fill = F) +
+  labs(x = "", y = "")+
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA, size = 2))
 
 # Models
 #model.daw.mm <- glmer(stay1 ~ last.reinf.fac * last.common + (1 + last.reinf.fac * last.common | subject), family = binomial,
@@ -148,15 +158,23 @@ df.agg <- df.bysubj %>%
 
 ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill = last.reinf.fac)) +
   geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Last reinforcement")) +
-  labs(x = "", y = "Prob of repeating action 2")
+  geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge, colour = 'white') +
+  guides(fill = F) +
+  labs(x = "", y = "") +
+  coord_cartesian(ylim=c(0, 1)) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        panel.background = element_rect(colour = "black", fill = "black"),
+        panel.grid = element_blank()) +
+  scale_fill_manual(values = c("+" = "#00cc00", "-" = "red"))
 
 # Model
 model.test3.mm <- glmer(stay2 ~ stay1 * last.reinf + (1 + stay1 * last.reinf | subject), family = binomial,
-                        data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare'))
+                        data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare'),
+                        control = glmerControl(optimizer = "bobyqa"))
 model.test3.null <- glmer(stay2 ~ stay1 + last.reinf + (1 + stay1 * last.reinf | subject), family = binomial,
-                        data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare'))
+                        data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare'),
+                        control = glmerControl(optimizer = "bobyqa"))
 summary(model.test3.mm)
 anova(model.test3.mm, model.test3.null)
 
@@ -175,26 +193,15 @@ ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill =
   labs(x = "", y = "Prob of repeating action 2") +
   facet_wrap(~ last.common)
 
-# Split up
-# First, same action1
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare' & stay1.fac == 'Same action1') %>%
-  group_by(stay1.fac, last.reinf.fac, subject) %>%
-  summarize(stay2 = mean(stay2)) %>%
-  filter(subject %in% df.bysubj$subject[df.bysubj$last.reinf.fac == '-'] &
-           subject %in% df.bysubj$subject[df.bysubj$last.reinf.fac == '+'])
-df.agg <- df.bysubj %>%
-  summarize(stay2.mean = mean(stay2), stay2.se = se(stay2))
-df.agg
-wilcox.test(stay2 ~ last.reinf.fac, data = df.bysubj)
-
-# Then, different action1
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare' & stay1.fac == 'Different action1') %>%
-  group_by(stay1.fac, last.reinf.fac, subject) %>%
-  summarize(stay2 = mean(stay2)) %>%
-  filter(subject %in% df.bysubj$subject[df.bysubj$last.reinf.fac == '-'] &
-           subject %in% df.bysubj$subject[df.bysubj$last.reinf.fac == '+'])
-wilcox.test(stay2 ~ last.reinf.fac, data = df.bysubj)
-
+model.test4.mm <- glmer(stay2 ~ stay1 * last.reinf * last.common + (1 + stay1 * last.reinf * last.common | subject), family = binomial,
+                        data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2'),
+                        control = glmerControl(optimizer = "bobyqa"))
+model.test4.null <- glmer(stay2 ~ stay1 + last.reinf + last.common + stay1:last.common + stay1:last.reinf + last.reinf:last.common +
+                            (1 + stay1 + last.reinf + last.common + stay1:last.common + stay1:last.reinf + last.reinf:last.common | subject), family = binomial,
+                          data = df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2'),
+                          control = glmerControl(optimizer = "bobyqa"))
+summary(model.test4.mm)
+anova(model.test4.mm, model.test4.null)
 
 ## RT2
 # After common
@@ -227,64 +234,13 @@ ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.
   labs(x = "", y = "RT of action 2") +
   facet_wrap(~ last.reinf.fac)
 
+## Modeling
 
-## RT1
-# Original daw plot, split by RT1
-df.bysubj <- df.crits %>% group_by(last.reinf.fac, last.common, rt1.fac, subject) %>%
-  filter(last.reinf.fac != '0') %>%
-  summarize(stay1 = mean(stay1))
+if (real) {
+  write.table(df.crits %>% select(Action1, S2, Action2, Re, subject_id), paste0(stem, 'data_fitting.csv'),
+              row.names = F, col.names = F, sep = ",")
+}
 
-df.agg <- df.bysubj %>%
-  summarize(stay1.mean = mean(stay1), stay1.se = se(stay1))
-
-ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill = last.common)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "")) +
-  labs(x = "", y = "Prob of repeating action 1") +
-  facet_wrap(~ rt1.fac)
-
-# Combined Stay2 stuff, split by RT1.fac
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2') %>%
-  group_by(stay1.fac, last.reinf.fac, last.common, rt1.fac, subject) %>%
-  summarize(stay2 = mean(stay2))
-
-df.agg <- df.bysubj %>%
-  summarize(stay2.mean = mean(stay2), stay2.se = se(stay2))
-
-ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill = last.reinf.fac)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Last reinforcement")) +
-  labs(x = "", y = "Prob of repeating action 2") +
-  facet_wrap(~ rt1.fac + last.common)
-
-# RT2 after common, split by RT1
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Common') %>%
-  group_by(stay1.fac, last.reinf.fac, stay2.fac, rt1.fac, subject) %>%
-  summarize(rt2 = mean(rt2))
-
-df.agg <- df.bysubj %>%
-  summarize(rt2.mean = mean(rt2), rt2.se = se(rt2))
-
-ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.fac)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Stage 2 choice")) +
-  labs(x = "", y = "RT of action 2") +
-  facet_wrap(~ rt1.fac + last.reinf.fac)
-
-# RT2 after rare, split by RT1
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare') %>%
-  group_by(stay1.fac, last.reinf.fac, stay2.fac, rt1.fac, subject) %>%
-  summarize(rt2 = mean(rt2))
-
-df.agg <- df.bysubj %>%
-  summarize(rt2.mean = mean(rt2), rt2.se = se(rt2))
-
-ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.fac)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Stage 2 choice")) +
-  labs(x = "", y = "RT of action 2") +
-  facet_wrap(~ rt1.fac + last.reinf.fac)
+## Bonuses
+write.table(df.demo %>% select(WorkerID = subject, Bonus = bonus),
+            paste0(stem, 'Bonus.csv'), row.names = FALSE, col.names = FALSE, sep = ",")
