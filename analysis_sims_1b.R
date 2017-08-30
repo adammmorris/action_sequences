@@ -8,7 +8,7 @@ dodge <- position_dodge(width=0.9)
 
 #----- Setup -----#
 real <- T
-stem = 'Behavioral/1b_fix/v2/real/'
+stem = 'Behavioral/1b_fix/v3/real/'
 
 if (real) {
   df <- read.csv(paste0(stem, 'data.csv')) %>% tbl_df
