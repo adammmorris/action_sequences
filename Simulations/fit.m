@@ -8,7 +8,7 @@ numSubj = 201;
 modelNames = {'MB_MB', 'MB_MFMB', 'MFMB_MB', 'MFMB_MFMB', 'MFMB_noAS'};
 modelParams = {[1 1 1 0], [1 -10 1 0], [-10 1 1 0], [-10 -10 1 0], [-10 0 0 0]};
 
-for m = 1:length(modelNames)
+for m = 2:length(modelNames)
     modelName = modelNames{m};
     params = modelParams{m};
     parfor s = 1:numSubj
