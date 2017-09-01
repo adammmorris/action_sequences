@@ -57,7 +57,7 @@ w_MB_AS = params(6); % % of AS valuation done in MB way
 w_MF_AS = 1 - w_MB_AS; % % done in MF way
 use_AS = params(7); % relative weighting on action sequences
 
-lr_trans = params(8);
+lr_trans = 0;
 
 Q_MB = zeros(numStates, numActions);
 Q_MF = zeros(numStates, numActions);

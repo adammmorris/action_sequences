@@ -29,21 +29,21 @@ if (whichSubj < 1 || whichSubj > numSubjects)
     error('whichSubj must be between 1 and numSubjects');
 end
 
-if fixedParams(7) == -10
-    error('use_AS (the 7th element of fixedParams) must be fixed.');
-end
-
 % Do params
-% [lr temp1 temp2 stay w_MB w_MB_AS use_AS lr_trans lr_miller]
-freeParams = fixedParams == -10;
-numFreeParams = sum(freeParams);
+% [use_AS lr temp1 temp2 stay w_MB w_MB_AS lr_trans]
+K_PARAM_IND = [true false false false false false false false];
 
-bounds = [0 0 0 -5 0 0 0 0 0; 1 10 10 5 1 1 1 1 1];
-    
+freeParams = fixedParams == -10;
+freeParams_noK = freeParams;
+freeParams_noK(K_PARAM_IND) = false;
+nFreeParams = sum(freeParams);
+nContFreeParams = sum(freeParams_noK);
+bounds = [0 0 0 0 -5 0 0 0; 1 1 10 10 5 1 1 1];
+
 % Calculate starts
-starts = zeros(numStarts, numFreeParams);
-bounds_fp = bounds(:, freeParams);
-for i = 1:numFreeParams
+starts = zeros(numStarts, nContFreeParams);
+bounds_fp = bounds(:, freeParams_noK);
+for i = 1:nContFreeParams
     ub = bounds_fp(2,i);
     lb = bounds_fp(1,i);
     starts(:,i) = rand(numStarts, 1) * (ub-lb) + lb;
@@ -52,7 +52,6 @@ end
 %% Start!
 load(whichEnv);
 
-%options = optimoptions(@fmincon, 'Display', 'off', 'UseParallel', false);
 options_unc = optimoptions(@fminunc, 'Display', 'Off', 'Algorithm', 'quasi-newton', 'MaxFunEvals', 0);
 
 if whichSubj < length(subjMarkers)
@@ -61,27 +60,57 @@ else
     index = subjMarkers(whichSubj):size(results, 1);
 end
 
-f = @(params) -posterior(envInfo, results(index, :), params, fixedParams, priorPDFs);
-
-logposts_starts = zeros(numStarts, 1);
-params_starts = zeros(numStarts, numFreeParams);
-
-for thisStart = 1:numStarts
-    [params_starts(thisStart, :), logposts_starts(thisStart)] = ...
-        fmincon(f, starts(thisStart, :), [], [], [], [], ...
-        bounds(1, freeParams), bounds(2, freeParams), []);
+if fixedParams(K_PARAM_IND) == -10
+    krange = bounds(1,K_PARAM_IND):bounds(2,K_PARAM_IND);
+    nDiscrete = length(krange);
+    logposts = zeros(nDiscrete, 1); % p(data | cont_params) * p(cont_params) * p(discrete_param)
+    hessians = cell(nDiscrete, 1);
+    optParams_all = zeros(nDiscrete, nContFreeParams);
+    
+    for nToEval_ind = 1:nDiscrete
+        f = @(params) -posterior(envInfo, results(index, :), [krange(nToEval_ind) params], fixedParams, priorPDFs);
+        logposts_starts = zeros(numStarts, 1);
+        params_starts = zeros(numStarts, nContFreeParams);
+        
+        for thisStart = 1:numStarts
+            [params_starts(thisStart, :), logposts_starts(thisStart), ~, ~, ~, ~] = ...
+                fmincon(f, starts(thisStart, :), [], [], [], [], ...
+                bounds(1, freeParams_noK), bounds(2, freeParams_noK), []);
+        end
+        
+        [~, bestStart] = min(logposts_starts);
+        logposts(nToEval_ind) = -logposts_starts(bestStart);
+        optParams_all(nToEval_ind, :) = params_starts(bestStart, :);
+        
+        [~, ~, ~, ~, ~, hessians{nToEval_ind}] = fminunc(f, optParams_all(nToEval_ind, :), options_unc);
+    end
+    
+    lme = log((2*pi)^(nContFreeParams / 2) * sum(exp(logposts) .* (cellfun(@det, hessians) .^ (-1/2))));
+    [post, optParams_ind] = max(logposts);
+    optParams = [krange(optParams_ind) optParams_all(optParams_ind, :)];
+else
+    f = @(params) -posterior(envInfo, results(index, :), params, fixedParams, priorPDFs);
+    
+    logposts_starts = zeros(numStarts, 1);
+    params_starts = zeros(numStarts, nFreeParams);
+    
+    for thisStart = 1:numStarts
+        [params_starts(thisStart, :), logposts_starts(thisStart)] = ...
+            fmincon(f, starts(thisStart, :), [], [], [], [], ...
+            bounds(1, freeParams), bounds(2, freeParams), []);
+    end
+    
+    [~, bestStart] = min(logposts_starts);
+    post = -logposts_starts(bestStart);
+    optParams = params_starts(bestStart, :);
+    
+    [~, ~, ~, ~, ~, hessian] = fminunc(f, optParams, options_unc);
+    lme = nFreeParams / 2 * log(2*pi) + post - .5 * log(det(hessian));
 end
-
-[~, bestStart] = min(logposts_starts);
-post = -logposts_starts(bestStart);
-optParams = params_starts(bestStart, :);
-
-[~, ~, ~, ~, ~, hessian] = fminunc(f, optParams, options_unc);
-lme = numFreeParams / 2 * log(2*pi) + post - .5 * log(det(hessian));
 
 ll = likelihood(envInfo, results(index, :), optParams, fixedParams);
 if isnan(lme) || ~isreal(lme) || isinf(lme) % resort to BIC
-    lme = -0.5 * (numFreeParams * (log(length(index) * 2) - log(2*pi)) - 2 * ll);
+    lme = -0.5 * (nFreeParams * (log(length(index) * 2) - log(2*pi)) - 2 * ll);
 end
 
 csvwrite([savePath num2str(whichSubj) '.txt'], [post, ll, lme, optParams]);

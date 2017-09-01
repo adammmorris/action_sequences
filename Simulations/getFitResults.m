@@ -4,12 +4,12 @@
 
 envName = '1b_fix';
 whichEnv = ['env/' envName '.mat'];
-simsName = 'real2';
+simsName = 'real3';
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
 realData = true;
-numSubjects = 201;
+numSubjects = 189;
 
 load(whichEnv);
 load(datapath);
@@ -27,15 +27,10 @@ for subj = 1:numSubjects
     LLs_chance(subj) = log(1 / 2) * length(index) * 2;
 end
 
-modelNames_all = {'MB_MB', 'MFMB_MB', 'MB_MFMB', 'MFMB_MFMB', 'MFMB_noAS', 'MB_MB_ET', 'MB_MB_ER'};
-modelParams_all = {
-    [-10 -10 -10 -10 1 1 1 0], [-10 -10 -10 -10 -10 1 1 0], ...
-    [-10 -10 -10 -10 1 -10 1 0], [-10 -10 -10 -10 -10 -10 1 0], ...
-    [-10 -10 -10 -10 -10 0 0 0], [-10 -10 -10 -10 1 1 1 -10], ...
-    [-10 -10 -10 -10 1 1 1 0]};
-whichParams_all = {1:4, 1:5, [1:4 6], 1:6, 1:5, [1:4 8], 1:4, [1:6 9]};
+modelNames_all = {'MB_MB', 'MB_MFMB', 'MFMB_MB', 'MFMB_MFMB', 'MFMB_noAS', 'MF_MB'};
+whichParams_all = {1:4, 1:5, [1:4 6], 1:6, 1:5, 1:4};
 
-whichModels = 1:5;
+whichModels = 1:6;
 
 modelNames = modelNames_all(whichModels);
 whichParams = whichParams_all(whichModels);
