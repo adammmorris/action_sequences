@@ -12,25 +12,26 @@
 % corrs: correlations between actual & estimated params (if dataPath was
 % inputted)
 
-function [paramEstimates, goodSubjects, corrs] = parseFitOutput(savePath, numSubjects, numFreeParams, dataPath)
+function [paramEstimates, goodSubjects, corrs] = parseFitOutput(savePath, numSubjects, whichParams, numExtraVars, dataPath, realData)
 
-paramEstimates = zeros(numSubjects, numFreeParams + 1); % first column is negLL
+numFreeParams = length(whichParams);
+paramEstimates = zeros(numSubjects, numFreeParams + numExtraVars);
 goodSubjects = false(numSubjects,1);
 
-for i = 1:numSubjects
-    name = [savePath 'Params_Subj' num2str(i) '.txt'];
-    if exist(name,'file')
-        paramEstimates(i,:) = csvread(name);
-        goodSubjects(i) = true;
+for whichSubj = 1:numSubjects    
+    name = [savePath num2str(whichSubj) '.txt'];
+    if exist(name, 'file')
+        paramEstimates(whichSubj, :) = csvread(name);
+        goodSubjects(whichSubj) = true;
     end
 end
 
 %% Get correlations
-if nargin == 4
+corrs = zeros(numFreeParams, 1);
+if ~realData
     load(dataPath);
-    corrs = zeros(numFreeParams, 1);
     for i = 1:numFreeParams
-        temporary = corrcoef(actualParams(goodSubjects, i), paramEstimates(goodSubjects, i+1));
+        temporary = corrcoef(actualParams(goodSubjects, whichParams(i)), paramEstimates(goodSubjects, i + numExtraVars));
         corrs(i) = temporary(2,1);
     end
 end

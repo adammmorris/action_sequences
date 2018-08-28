@@ -9,11 +9,8 @@ simsName = 'real1';
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
-fitpath = [main '/fit.mat'];
-%subjlist = 1:length(subjMarkers);
-subjlist = 1;
-
-numSubjects = length(subjlist);
+%numSubjects = 189;
+numSubjects = 96;
 
 modelNames_all = {'MFMB_noAS', 'MB_MB', 'MFMB_MB', 'MB_MFMB', 'MFMB_MFMB'};
 modelParams = {
@@ -26,14 +23,12 @@ whichParams_all = {1:5, 1:4, 1:5, [1:4 6], 1:6};
 
 whichModels = 1:5;
 
-%% extract results
+%% do it
 load(datapath);
-load(fitpath);
 
 numChoices = zeros(numSubjects, 1);
 LLs_chance = zeros(numSubjects, 1);
-for subj_ind = 1:length(subjlist)
-    subj = subjlist(subj_ind);
+for subj = 1:numSubjects
     if subj < length(subjMarkers)
         index = subjMarkers(subj):(subjMarkers(subj + 1) - 1);
     else
@@ -46,6 +41,7 @@ end
 
 modelNames = modelNames_all(whichModels);
 whichParams = whichParams_all(whichModels);
+
 numModels = length(modelNames);
 
 details = zeros(numSubjects, numModels, 4);
@@ -59,5 +55,5 @@ for i = 1:numModels
     optParams{model} = optParams{model}(subjlist,:);
 end
 
-%% run comparison
-compareModels_bayes(optParams(whichModels), details, 1, LLs_chance);
+%% Model comparison
+compareModels(optParams(whichModels), details, 1, LLs_chance);

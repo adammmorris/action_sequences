@@ -17,7 +17,7 @@
 %   Note that use_AS must be fixed. If it is fixed to 0, w_MB_AS should
 %   also be fixed (doesn't matter to what value).
 
-function fitModel(dataPath, whichEnv, savePath, fixedParams, priorPDFs, whichSubj, numStarts, on_cluster)
+function [optParams, results] = fitModel(dataPath, whichEnv, savePath, fixedParams, priorPDFs, whichSubj, numStarts, on_cluster)
 %% Load data
 load(dataPath);
 
@@ -30,15 +30,15 @@ if (whichSubj < 1 || whichSubj > numSubjects)
 end
 
 % Do params
-% [use_AS lr temp1 temp2 stay w_MB w_MB_AS lr_trans]
-K_PARAM_IND = [true false false false false false false false];
+% [lr temp1 temp2 stay w_MB w_MB_AS use_AS]
+K_PARAM_IND = [false false false false false false false];
 
 freeParams = fixedParams == -10;
 freeParams_noK = freeParams;
 freeParams_noK(K_PARAM_IND) = false;
 nFreeParams = sum(freeParams);
 nContFreeParams = sum(freeParams_noK);
-bounds = [0 0 0 0 -5 0 0 0; 1 1 10 10 5 1 1 1];
+bounds = [0 0 0 -5 0 0 0; 1 10 10 5 1 1 1];
 
 % Calculate starts
 starts = zeros(numStarts, nContFreeParams);
@@ -52,13 +52,13 @@ end
 %% Start!
 load(whichEnv);
 
-options_unc = optimoptions(@fminunc, 'Display', 'Off', 'Algorithm', 'quasi-newton', 'MaxFunEvals', 0);
-
 if whichSubj < length(subjMarkers)
     index = subjMarkers(whichSubj):(subjMarkers(whichSubj + 1) - 1);
 else
     index = subjMarkers(whichSubj):size(results, 1);
 end
+ 
+options = optimoptions('fmincon', 'Display', 'off');
 
 if fixedParams(K_PARAM_IND) == -10
     krange = bounds(1,K_PARAM_IND):bounds(2,K_PARAM_IND);
@@ -75,14 +75,14 @@ if fixedParams(K_PARAM_IND) == -10
         for thisStart = 1:numStarts
             [params_starts(thisStart, :), logposts_starts(thisStart), ~, ~, ~, ~] = ...
                 fmincon(f, starts(thisStart, :), [], [], [], [], ...
-                bounds(1, freeParams_noK), bounds(2, freeParams_noK), []);
+                bounds(1, freeParams_noK), bounds(2, freeParams_noK), [], options);
         end
         
         [~, bestStart] = min(logposts_starts);
         logposts(nToEval_ind) = -logposts_starts(bestStart);
         optParams_all(nToEval_ind, :) = params_starts(bestStart, :);
         
-        [~, ~, ~, ~, ~, hessians{nToEval_ind}] = fminunc(f, optParams_all(nToEval_ind, :), options_unc);
+        [~, ~, ~, ~, ~, hessians{nToEval_ind}] = NumHessian(f, optParams_all(nToEval_ind, :));
     end
     
     lme = log((2*pi)^(nContFreeParams / 2) * sum(exp(logposts) .* (cellfun(@det, hessians) .^ (-1/2))));
@@ -97,24 +97,26 @@ else
     for thisStart = 1:numStarts
         [params_starts(thisStart, :), logposts_starts(thisStart)] = ...
             fmincon(f, starts(thisStart, :), [], [], [], [], ...
-            bounds(1, freeParams), bounds(2, freeParams), []);
+            bounds(1, freeParams), bounds(2, freeParams), [], options);
     end
     
     [~, bestStart] = min(logposts_starts);
     post = -logposts_starts(bestStart);
     optParams = params_starts(bestStart, :);
-    
-    [~, ~, ~, ~, ~, hessian] = fminunc(f, optParams, options_unc);
+  
+    hessian = NumHessian(f, optParams);
     lme = nFreeParams / 2 * log(2*pi) + post - .5 * log(det(hessian));
 end
 
 ll = likelihood(envInfo, results(index, :), optParams, fixedParams);
+bic = nFreeParams * (log(length(index)) - log(2*pi)) - 2 * ll;
 if isnan(lme) || ~isreal(lme) || isinf(lme) % resort to BIC
-    lme = -0.5 * (nFreeParams * (log(length(index) * 2) - log(2*pi)) - 2 * ll);
+    lme = -0.5 * bic;
 end
 
-csvwrite([savePath num2str(whichSubj) '.txt'], [post, ll, lme, optParams]);
+results = [post, ll, bic, lme];
+%csvwrite([savePath num2str(whichSubj) '.txt'], [post, ll, bic, lme, optParams]);
 
-if on_cluster
-    delete(gcp);
-end
+% if on_cluster
+%     delete(gcp);
+% end

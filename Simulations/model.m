@@ -20,10 +20,7 @@
 % sequences, but only the actions ones actually get implemented - the
 % sequence ones are purely for agent planning.
 
-function [results] = model(envInfo, params, numRounds)
-if nargin < 4, debug = 0; end
-if nargin < 3, numRounds = 250; end
-if nargin < 2, params = [.1 1 1 1 .5 .5 0 0]; end
+function [results] = model(envInfo, params)
 
 %% Load environment info
 states = envInfo{1};
@@ -68,16 +65,8 @@ for thisAgent = 1:numAgents
     w_MF_AS = 1 - w_MB_AS; % % done in MF way
     use_AS = params(thisAgent, 7); % relative weighting on action sequences
     
-    lr_trans = params(thisAgent, 8);
-    % habit LR (use original LR for reward, lr_trans for transition estimation, w_MB for goal weight, w_MB_AS for habit weight)
-    lr_miller = params(thisAgent, 9); % if this is > 0, use_AS must be 0!
-    
-    rg = 0;
-    rzero = 0;
-    
     Q_MB = zeros(numStates,numActions);
     Q_MF = zeros(numStates,numActions);
-    Q_H = zeros(numStates, numActions);
     
     if extremeRep
         if rewardsAreProbs
@@ -129,27 +118,15 @@ for thisAgent = 1:numAgents
         end
         
         Q_weighted = zeros(1, length(S1_choices));
-        if lr_miller > 0
-            probs_goalcontroller = 1 / (1 + exp(w_MB_AS * mean(Q_H(S1,:) .^ 2) - w_MB * (rg - rzero) ^ 2));
-           	if rand() < probs_goalcontroller
-                curGoalController = 1;
-                Q_weighted(S1_actions) = Q_MB(S1, S1_actions);
-            else
-                curGoalController = 0;
-                Q_weighted(S1_actions) = Q_H(S1, S1_actions);
-            end
-            
-            weighted_vals = temp1 * Q_weighted;
-        else
-            % Combine Q vals
-            if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
-            else Q_weighted(S1_seqs) = -Inf;
-            end
-            Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
 
-            % Choose action
-            weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastChoice1);
+        % Combine Q vals
+        if use_AS, Q_weighted(S1_seqs) = w_MB_AS * Q_MB(S1, S1_seqs) + w_MF_AS * Q_MF(S1, S1_seqs);
+        else Q_weighted(S1_seqs) = -Inf;
         end
+        Q_weighted(S1_actions) = w_MB * Q_MB(S1, S1_actions) + w_MF * Q_MF(S1, S1_actions);
+
+        % Choose action
+        weighted_vals = temp1 * Q_weighted + stay * (S1_choices == lastChoice1);
 
         probs = exp(weighted_vals) / sum(exp(weighted_vals));
         choice1 = S1_choices(fastrandsample(probs, 1));
@@ -171,21 +148,10 @@ for thisAgent = 1:numAgents
             Q_MB(S2, S2_choices) = permute(transition_probs(S2, S2_choices, states{3}), [2 3 1]) * Q_MB(states{3}, 1);
         
             % Combine Q vals
-            Q_weighted = zeros(1, length(S2_choices));
-            if lr_miller > 0
-                if curGoalController
-                    Q_weighted(S2_choices) = Q_MB(S2, S2_choices);
-                else
-                    Q_weighted(S2_choices) = Q_H(S2, S2_choices);
-                end
-                
-                weighted_vals = temp2 * Q_weighted;
-            else
-                Q_weighted = w_MB * Q_MB(S2, S2_choices) + w_MF * Q_MF(S2, S2_choices);
-                
-                % Choose action
-                weighted_vals = temp2 * Q_weighted + stay * (S2_choices == lastChoice2);
-            end
+            Q_weighted = w_MB * Q_MB(S2, S2_choices) + w_MF * Q_MF(S2, S2_choices);
+
+            % Choose action
+            weighted_vals = temp2 * Q_weighted + stay * (S2_choices == lastChoice2);
         
             % Choose action
             probs = exp(weighted_vals) / sum(exp(weighted_vals));
@@ -322,38 +288,17 @@ for thisAgent = 1:numAgents
                 sum(transition_probs(S1, executedSeq, :));
         else
             Q_MB(S3,1) = Q_MB(S3,1) + lr * (reward_normed - Q_MB(S3, 1));
-
-            transition_probs(S1, action1, S2) = transition_probs(S1, action1, S2) + ...
-                lr_trans * (1 - transition_probs(S1, action1, S2));
-            transition_probs(S1, action1, :) = transition_probs(S1, action1, :) / ...
-                sum(transition_probs(S1, action1, :));
         end
-        
-        % Update Miller's habits
-        Q_H(S1, action1) = Q_H(S1, action1) + lr_miller * (1 - Q_H(S1, action1));
-        others = setdiff(actions{S1}, action1);
-        Q_H(S1, others) = Q_H(S1, others) + lr_miller * (0 - Q_H(S1, others));
-
-        % Second choice
-        Q_H(S2, action2) = Q_H(S2, action2) + lr_miller * (1 - Q_H(S2, action2));
-        others = setdiff(actions{S2}, action2);
-        Q_H(S2, others) = Q_H(S2, others) + lr_miller * (0 - Q_H(S2, others));
-        
-        %if curGoalController
-        %    rg = rg + lr * (reward - rg);
-        %end
-        
-        rzero = rzero + lr * (reward - rzero);
         
         lastChoice1 = choice1;
         lastChoice2 = choice2;
         
         %% Record results
         results(result_counter, :) = [action1 S2 choice2 reward agentNum thisRound RT2];
-        if debug
-            disp({'A1', 'S2', 'A2', 'Re', 'Subj', 'Round', 'RT2'});
-            disp(results(result_counter, :));
-        end
+%         if debug
+%             disp({'A1', 'S2', 'A2', 'Re', 'Subj', 'Round', 'RT2'});
+%             disp(results(result_counter, :));
+%         end
         result_counter = result_counter + 1;
     end
 end

@@ -5,10 +5,10 @@ clearvars
 
 % These can be changed when actually running the simulation,
 % but we set them to a max value here.
-numAgents_max = 500;
+numAgents_max = 1000;
 numRounds_max = 250;
 
-whichEnv = '1b_fix_extreme';
+whichEnv = '2step';
 
 %% Set parameters
 rewardsAreProbs = false;

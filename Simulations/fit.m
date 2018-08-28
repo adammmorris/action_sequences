@@ -1,17 +1,36 @@
 clearvars
 addpath 'utilities'
-datapath = 'fitting/1b_fix/real3/';
-priors = {@(x) log(unifpdf(x, 0, 1)), @(x) log(betapdf(x, 1.2, 1.2)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(normpdf(x, .15, 1.42)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
-numStarts = 2;
+datapath = 'fitting/2step/real1/';
+envpath = 'env/2step.mat';
+numStarts = 10;
 numSubj = 1;
 
-modelNames = {'MB_MB2', 'MFMB_MFMB_rAS'};
-modelParams = {[1 -10 -10 -10 -10 1 1], [-10 -10 -10 -10 -10 -10 -10]};
+priors = {
+    @(x) log(unifpdf(x, 0, 1)), ...
+    @(x) log(unifpdf(x, 0, 10)), ...
+    @(x) log(unifpdf(x, 0, 10)), ...
+    @(x) log(unifpdf(x, -5, 5)), ...
+    @(x) log(unifpdf(x, 0, 1)), ...
+    @(x) log(unifpdf(x, 0, 1)), ...
+    @(x) log(unifpdf(x, 0, 1))};
 
-for m = 2:length(modelNames)
+
+modelNames = {'MFMB_noAS', 'MB_MB', 'MFMB_MB', 'MB_MFMB', 'MFMB_MFMB'};
+modelParams = {
+    [-10 -10 -10 -10, -10, 0, 0], ...
+    [-10 -10 -10 -10, 1, 1, 1], ...
+    [-10 -10 -10 -10, -10, 1, 1], ...
+    [-10 -10 -10 -10, 1, -10, 1], ...
+    [-10 -10 -10 -10, -10, -10, 1]};
+
+optParams = cell(length(modelNames), 1);
+results = cell(length(modelNames), 1);
+parfor m = 1:length(modelNames)
     modelName = modelNames{m};
     params = modelParams{m};
     for s = 1:numSubj
-        fitModel([datapath 'data.mat'], 'env/1b_fix.mat', [datapath 'fit_' modelName '/'], params, priors, s, numStarts, false);
+        [optParams{m}, results{m}] = fitModel([datapath 'data.mat'], envpath, [datapath 'fit_' modelName '/'], params, priors, s, numStarts, false);
     end
 end
+
+save([datapath 'fit.mat'], 'optParams', 'results');

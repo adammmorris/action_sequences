@@ -57,8 +57,6 @@ w_MB_AS = params(6); % % of AS valuation done in MB way
 w_MF_AS = 1 - w_MB_AS; % % done in MF way
 use_AS = params(7); % relative weighting on action sequences
 
-lr_trans = 0;
-
 Q_MB = zeros(numStates, numActions);
 Q_MF = zeros(numStates, numActions);
 
@@ -224,11 +222,6 @@ for thisRound=1:numRounds
             sum(transition_probs(S1, executedSeq, :));
     else
         Q_MB(S3,1) = Q_MB(S3,1) + lr * (reward_normed - Q_MB(S3, 1));
-        
-        transition_probs(S1, action1, S2) = transition_probs(S1, action1, S2) + ...
-            lr_trans * (1 - transition_probs(S1, action1, S2));
-        transition_probs(S1, action1, :) = transition_probs(S1, action1, :) / ...
-            sum(transition_probs(S1, action1, :));
     end
     
     lastAction1 = action1;
