@@ -14,7 +14,7 @@ fitName=${2}
 fixedParams=${3}
 numStarts=${4}
 
-priorPDFs="{@(x) log(betapdf(x, 1.2, 1.2)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(normpdf(x, .15, 1.42)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(betapdf(x, 1.2, 1.2)), @(x) log(betapdf(x, 1.2, 1.2))}"
+priorPDFs="{@(x) log(unifpdf(x, 0, 1)), @(x) log(betapdf(x, 1.2, 1.2)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(normpdf(x, .15, 1.42)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))}"
 
 dataname="data.mat"
 envname="1b_fix"

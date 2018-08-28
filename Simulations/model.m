@@ -20,7 +20,7 @@
 % sequences, but only the actions ones actually get implemented - the
 % sequence ones are purely for agent planning.
 
-function [results] = model(envInfo, params, numRounds, debug)
+function [results] = model(envInfo, params, numRounds)
 if nargin < 4, debug = 0; end
 if nargin < 3, numRounds = 250; end
 if nargin < 2, params = [.1 1 1 1 .5 .5 0 0]; end
@@ -339,9 +339,9 @@ for thisAgent = 1:numAgents
         others = setdiff(actions{S2}, action2);
         Q_H(S2, others) = Q_H(S2, others) + lr_miller * (0 - Q_H(S2, others));
         
-        if curGoalController
-            rg = rg + lr * (reward - rg);
-        end
+        %if curGoalController
+        %    rg = rg + lr * (reward - rg);
+        %end
         
         rzero = rzero + lr * (reward - rzero);
         

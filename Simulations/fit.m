@@ -1,7 +1,7 @@
 clearvars
 addpath 'utilities'
 datapath = 'fitting/1b_fix/real3/';
-priors = {@(x) log(betapdf(x, 1.2, 1.2)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(normpdf(x, .15, 1.42)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(betapdf(x, 1.2, 1.2))};
+priors = {@(x) log(unifpdf(x, 0, 1)), @(x) log(betapdf(x, 1.2, 1.2)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(gampdf(x, 4.82, .88)), @(x) log(normpdf(x, .15, 1.42)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
 numStarts = 2;
 numSubj = 1;
 

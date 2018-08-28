@@ -1,10 +1,10 @@
 %% Parameters
 numAgents = 500;
 numRounds = 125;
-env = '2step';
-modelName = 'MFMB_MFMB';
+env = '1b_fix';
+modelName = 'MB_MB';
 estimateTrans = false;
-doMiller = true;
+doMiller = false;
 debug = 0;
 
 whichEnv = ['env/' env '.mat'];
@@ -44,7 +44,7 @@ for thisSubj = 1:numAgents
         w_MB = 1;
         w_MB_AS = rand();
         use_AS = 1;
-    elseif strcmp(modelName, 'MFMB_MFMB')
+    elseif strcmp(modelName, 'MF_MF')
         w_MB = rand();
         w_MB_AS = rand();
         use_AS = 1;

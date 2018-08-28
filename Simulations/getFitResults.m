@@ -10,6 +10,7 @@ main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
 realData = true;
 numSubjects = 189;
+%numSubjects = 96;
 
 load(whichEnv);
 load(datapath);
@@ -27,8 +28,9 @@ for subj = 1:numSubjects
     LLs_chance(subj) = log(1 / 2) * length(index) * 2;
 end
 
-modelNames_all = {'MB_MB', 'MB_MFMB', 'MFMB_MB', 'MFMB_MFMB', 'MFMB_noAS', 'MF_MB'};
-whichParams_all = {1:4, 1:5, [1:4 6], 1:6, 1:5, 1:4};
+modelNames_all = {'MB_MB', 'MB_MFMB', 'MFMB_MB', 'MFMB_MFMB', 'MFMB_noAS', 'MF_MB', ...
+    'MB_MFMB_rAS', 'MFMB_MB_rAS', 'MFMB_MF_rAS', 'MF_MB_rAS', 'MFMB_MFMB_rAS'};
+whichParams_all = {2:5, [2:5 7], 2:6, 2:7, 2:6, 2:5, [1:5 7], 1:6, 1:6, 1:5, 1:7};
 
 whichModels = 1:6;
 
@@ -58,4 +60,4 @@ end
 [params, details] = generateParamsCell(paramEstimates{:});
 
 %% Model comparison
-compareModels_bayes(params, details, 4, numChoices, LLs_chance(goodSubjects));
+compareModels_nobic(params, details, 4, numChoices, LLs_chance(goodSubjects));
