@@ -3,7 +3,7 @@ addpath 'utilities'
 datapath = 'fitting/2step/real1/';
 envpath = 'env/2step.mat';
 numStarts = 10;
-numSubj = 1;
+numSubj = 96;
 
 priors = {
     @(x) log(unifpdf(x, 0, 1)), ...
