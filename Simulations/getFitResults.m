@@ -10,8 +10,8 @@ simsName = 'real1';
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
 fitpath = [main '/fit.mat'];
-%subjlist = 1:length(subjMarkers);
-subjlist = 1;
+subjlist = 1:length(subjMarkers);
+%subjlist = 1;
 
 numSubjects = length(subjlist);
 

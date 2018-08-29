@@ -28,9 +28,14 @@ results = cell(length(modelNames), 1);
 parfor m = 1:length(modelNames)
     modelName = modelNames{m};
     params = modelParams{m};
+    optParams_subj = zeros(numSubj, sum(params == -10));
+    results_subj = zeros(numSubj, 4);
     for s = 1:numSubj
-        [optParams{m}, results{m}] = fitModel([datapath 'data.mat'], envpath, [datapath 'fit_' modelName '/'], params, priors, s, numStarts, false);
+        [optParams_subj(s,:), results_subj(s,:)] = fitModel([datapath 'data.mat'], envpath, [datapath 'fit_' modelName '/'], params, priors, s, numStarts, false);
     end
+    
+    optParams{m} = optParams_subj;
+    results{m} = results_subj;
 end
 
 save([datapath 'fit.mat'], 'optParams', 'results');
