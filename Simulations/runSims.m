@@ -1,34 +1,21 @@
 %% Parameters
-numAgents = 500;
+numAgents = 300;
 numRounds = 125;
-env = '1b_fix';
-modelName = 'MB_MB';
-estimateTrans = false;
-doMiller = false;
-debug = 0;
+env = '2step';
+modelName = 'MFMB_MFMB';
 
 whichEnv = ['env/' env '.mat'];
-whichModel = ['data/' env '/sims_' modelName '.csv'];
+whichModel = ['sims/' env '/sims_' modelName '.mat'];
 
 % Set up their parameters
-actualParams = zeros(numAgents, 9); % [lr1, lr2, elig, temp1, temp2, stay, weight_MBAS, weight_MB, lr_trans, lr_miller]
+actualParams = zeros(numAgents, 7); % [lr1, lr2, elig, temp1, temp2, stay, weight_MBAS, weight_MB, lr_trans, lr_miller]
 for thisSubj = 1:numAgents
-    lr = betarnd(1.2, 1.2);
-    if estimateTrans, lr_trans = betarnd(1.2, 1.2);
-    else lr_trans = 0;
-    end
-    if doMiller, lr_miller = betarnd(1.2, 1.2);
-    else lr_miller = 0;
-    end
-    temp1 = gamrnd(4.82, .88);
-    temp2 = gamrnd(4.82, .88);
-    stay = normrnd(.15, 1.42);
+    lr = unifrnd(0,1);
+    temp1 = unifrnd(0,10);
+    temp2 = unifrnd(0,10);
+    stay = unifrnd(0,5);
     
-    if strcmp(modelName, 'MB_noAS')
-        w_MB = 1;
-        w_MB_AS = 0;
-        use_AS = 0;
-    elseif strcmp(modelName, 'MFMB_noAS')
+    if strcmp(modelName, 'MFMB_noAS')
         w_MB = rand();
         w_MB_AS = 0;
         use_AS = 0;
@@ -44,24 +31,24 @@ for thisSubj = 1:numAgents
         w_MB = 1;
         w_MB_AS = rand();
         use_AS = 1;
-    elseif strcmp(modelName, 'MF_MF')
+    elseif strcmp(modelName, 'MFMB_MFMB')
         w_MB = rand();
         w_MB_AS = rand();
         use_AS = 1;
     end
     
-    actualParams(thisSubj,:) = [lr temp1 temp2 stay w_MB w_MB_AS use_AS lr_trans lr_miller];
+    actualParams(thisSubj,:) = [lr temp1 temp2 stay w_MB w_MB_AS use_AS];
 end
 
 load(whichEnv);
-results_all = model(envInfo, actualParams, numRounds, debug);
+results_all = runModel(envInfo, actualParams);
 
 %% Get earnings
-earnings = zeros(numAgents, 1);
-for i = 1:numAgents
-    earnings(i) = sum(results_all((numRounds * (i - 1) + 1) : (numRounds * i), 4));
-end
-mean(earnings)
+%earnings = zeros(numAgents, 1);
+%for i = 1:numAgents
+%    earnings(i) = sum(results_all((numRounds * (i - 1) + 1) : (numRounds * i), 4));
+%end
+%mean(earnings)
 % std(earnings) / sqrt(numAgents)
 
 %% Write data

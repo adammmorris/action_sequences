@@ -10,6 +10,9 @@ simsName = 'real1';
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
 fitpath = [main '/fit.mat'];
+
+load(datapath);
+
 subjlist = 1:length(subjMarkers);
 %subjlist = 1;
 
@@ -27,7 +30,6 @@ whichParams_all = {1:5, 1:4, 1:5, [1:4 6], 1:6};
 whichModels = 1:5;
 
 %% extract results
-load(datapath);
 load(fitpath);
 
 numChoices = zeros(numSubjects, 1);

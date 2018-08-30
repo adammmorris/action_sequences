@@ -20,7 +20,7 @@
 % sequences, but only the actions ones actually get implemented - the
 % sequence ones are purely for agent planning.
 
-function [results] = model(envInfo, params)
+function [results] = runModel(envInfo, params)
 
 %% Load environment info
 states = envInfo{1};
@@ -41,6 +41,7 @@ rewards_normed = (rewards + 5) / 10;
 
 %% Loop through agents
 numAgents = size(params, 1);
+numRounds = 125;
 
 results = zeros(numAgents * numRounds, 7);
 result_counter = 1;
