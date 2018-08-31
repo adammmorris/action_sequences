@@ -2,13 +2,13 @@
 numAgents = 300;
 numRounds = 125;
 env = '2step';
-modelName = 'MFMB_MFMB';
+modelName = 'MFMB_noAS';
 
 whichEnv = ['env/' env '.mat'];
 whichModel = ['sims/' env '/sims_' modelName '.mat'];
 
 % Set up their parameters
-actualParams = zeros(numAgents, 7); % [lr1, lr2, elig, temp1, temp2, stay, weight_MBAS, weight_MB, lr_trans, lr_miller]
+actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
 for thisSubj = 1:numAgents
     lr = unifrnd(0,1);
     temp1 = unifrnd(0,10);
