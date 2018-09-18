@@ -10,9 +10,9 @@ whichModel = ['sims/' env '/sims_' modelName '.mat'];
 % Set up their parameters
 actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
 for thisSubj = 1:numAgents
-    lr = unifrnd(0,1);
-    temp1 = unifrnd(0,10);
-    temp2 = unifrnd(0,10);
+    lr = betarnd(1.2,1.2);
+    temp1 = gamrnd(4.82,.88);
+    temp2 = gamrnd(4.82,.88);
     stay = unifrnd(0,5);
     
     if strcmp(modelName, 'MFMB_noAS')
