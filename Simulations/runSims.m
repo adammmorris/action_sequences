@@ -2,7 +2,7 @@
 numAgents = 300;
 numRounds = 125;
 env = '2step';
-modelName = 'MFMB_noAS';
+modelName = 'MFMB_MB';
 
 whichEnv = ['env/' env '.mat'];
 whichModel = ['sims/' env '/sims_' modelName '.mat'];
@@ -10,10 +10,10 @@ whichModel = ['sims/' env '/sims_' modelName '.mat'];
 % Set up their parameters
 actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
 for thisSubj = 1:numAgents
-    lr = betarnd(1.2,1.2);
-    temp1 = gamrnd(4.82,.88);
-    temp2 = gamrnd(4.82,.88);
-    stay = unifrnd(0,5);
+    lr = betarnd(1.1,1.1);
+    temp1 = gamrnd(1.2,5);
+    temp2 = gamrnd(1.2,5);
+    stay = normrnd(0,1);
     
     if strcmp(modelName, 'MFMB_noAS')
         w_MB = rand();
