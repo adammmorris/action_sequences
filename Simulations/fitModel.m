@@ -31,7 +31,7 @@ end
 
 % Do params
 % [lr temp1 temp2 stay w_MB w_MB_AS use_AS]
-K_PARAM_IND = [false false false false false false false];
+K_PARAM_IND = [false false false false false false true];
 
 freeParams = fixedParams == -10;
 freeParams_noK = freeParams;
@@ -59,6 +59,7 @@ else
 end
  
 options = optimoptions('fmincon', 'Display', 'off');
+options_unc = optimoptions(@fminunc, 'Display', 'Off', 'Algorithm', 'quasi-newton', 'MaxFunEvals', 0);
 
 if fixedParams(K_PARAM_IND) == -10
     krange = bounds(1,K_PARAM_IND):bounds(2,K_PARAM_IND);
@@ -104,7 +105,8 @@ else
     post = -logposts_starts(bestStart);
     optParams = params_starts(bestStart, :);
   
-    hessian = NumHessian(f, optParams);
+    %hessian = NumHessian(f, optParams);
+    [~, ~, ~, ~, ~, hessian] = fminunc(f, optParams, options_unc);
     lme = nFreeParams / 2 * log(2*pi) + post - .5 * log(det(hessian));
 end
 
