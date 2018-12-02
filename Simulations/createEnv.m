@@ -8,7 +8,7 @@ clearvars
 numAgents_max = 1000;
 numRounds_max = 250;
 
-whichEnv = '2step';
+whichEnv = '1b_fix';
 
 %% Set parameters
 rewardsAreProbs = false;

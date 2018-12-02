@@ -2,7 +2,7 @@
 numAgents = 300;
 numRounds = 125;
 env = '1b_fix';
-modelName = 'MFMB_MFMB';
+modelName = 'MFMB_';
 
 whichEnv = ['env/' env '.mat'];
 whichModel = ['sims/' env '/sims_' modelName '.mat'];

@@ -1,7 +1,7 @@
 clearvars
 addpath 'utilities'
-datapath = 'fitting/2step/real1/';
-envpath = 'env/2step.mat';
+datapath = 'fitting/1b_fix/sims_MFMB_noAS/';
+envpath = 'env/1b_fix.mat';
 numStarts = 10;
 numSubj = 96;
 
