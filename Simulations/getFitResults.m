@@ -5,7 +5,7 @@
 %% setup
 envName = '2step';
 whichEnv = ['env/' envName '.mat'];
-simsName = 'sims_MB_MB';
+simsName = 'real1';
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];

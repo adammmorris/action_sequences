@@ -1,9 +1,9 @@
 clearvars
 addpath 'utilities'
-datapath = 'fitting/2step/sims_MFMB_MB/';
+datapath = 'fitting/2step/real1/';
 envpath = 'env/2step.mat';
 numStarts = 10;
-numSubj = 300;
+numSubj = 96;
 
 priors = {@(x) log(betapdf(x, 1.1, 1.1)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(normpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
 
