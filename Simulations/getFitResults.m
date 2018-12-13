@@ -3,9 +3,9 @@
 % models.
 
 %% setup
-envName = '2step';
+envName = '1b_fix';
 whichEnv = ['env/' envName '.mat'];
-simsName = 'real1';
+simsName = 'real3';
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
