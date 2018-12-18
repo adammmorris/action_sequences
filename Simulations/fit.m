@@ -3,7 +3,7 @@ addpath 'utilities'
 datapath = 'fitting/1b_fix/real3/';
 envpath = 'env/1b_fix.mat';
 numStarts = 10;
-numSubj = 189;
+numSubj = 201;
 
 priors = {@(x) log(betapdf(x, 1.1, 1.1)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(normpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
 

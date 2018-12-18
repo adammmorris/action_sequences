@@ -17,36 +17,39 @@ dodge <- position_dodge(width=0.9)
 # Import data -------------------------------------------------------------
 
 real <- T
+rewardsAreProbs <- F
 if (real) {
-  df <- read.csv('Behavioral/2step/v1/data.csv') %>% tbl_df
+  df.demo <- read.csv('Behavioral/2step/v1/data_demo.csv')
+  subjlist = df.demo$subject
+  df <- read.csv('Behavioral/2step/v1/data.csv') %>% tbl_df %>% filter(subject %in% subjlist) %>% arrange(subject)
 } else {
-  df <- read.csv('Simulations/data/2step/sims_MFMB_noAS.csv') %>% tbl_df
+  df <- read.csv('Simulations/sims/2step/real1.csv') %>% tbl_df %>% arrange(subject)
 }
 
 ## Exclusion
 if (real) {
-  df.demo <- read.csv('Behavioral/2step/v1/data_demo.csv')
-  exclude.subj <- df.demo$subject[(df.demo$reading_time / 60000) < 1]
-  df <- df %>% filter(!(df$subject %in% exclude.subj))
-  df.demo.exclude = df.demo %>% filter(!(df.demo$subject %in% exclude.subj))
+  exclude.subj <- as.character(df.demo$subject[(df.demo$reading_time / 60000) < 1])
+  df <- df %>% filter(!(as.character(subject) %in% exclude.subj))
 }
-
-subjlist = unique(as.character(df$subject))
 
 df.crits <- df %>%
   mutate(
-    last.common = factor(lag(common), c(1, 0), c('Common', 'Rare')),
+    last.common = factor(lag(S2) == (lag(Action1) + 1), c(T, F), c('Common', 'Rare')),
     sameS2 = factor(lag(S2) == S2, c(T, F), c("Same S2", "Different S2")),
     stay1 = Action1 == lag(Action1),
     stay2 = Action2 == lag(Action2),
     stay1.fac = factor(Action1 == lag(Action1), c(T, F), c("Same action1", "Different action1")),
     stay2.fac = factor(Action2 == lag(Action2), c(T, F), c("Same action2", "Different action2")),
-    rt1.fac = factor(rt1 < median(rt1), c(T, F), c("RT1 fast", "RT1 slow")),
     last.reinf = lag(Re),
-    last.reinf.fac = factor(last.reinf >= 0, c(T,F), c("+", "-")),
     subject_id = as.numeric(subject)
   ) %>%
   filter(round != min(round, na.rm = T))
+
+if (real | !rewardsAreProbs) {
+  df.crits = df.crits %>% mutate(last.reinf.fac = factor(last.reinf >= 0, c(T,F), c("+", "-")))
+} else {
+  df.crits = df.crits %>% mutate(last.reinf.fac = factor(last.reinf > 0, c(T,F), c("+", "-")))
+}
 
 if (real) {
   df.crits = df.crits %>%
@@ -68,7 +71,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill
   geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
   guides(fill = F) +
   labs(x = "", y = "") +
-  coord_cartesian(ylim=c(0, 1)) +
+  coord_cartesian(ylim=c(0,1)) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
@@ -76,7 +79,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill
 
 # Models
 model.daw.mm <- glmer(stay1 ~ last.reinf.fac * last.common + (1 + last.reinf.fac * last.common | subject),
-                      family = binomial, data = df.crits)
+                      family = binomial, data = df.crits, contrasts = list(last.reinf.fac = contr.sum, last.common = contr.sum))
 summary(model.daw.mm)
 
 
@@ -98,15 +101,15 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill =
   labs(x = "", y = "") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
-        panel.border = element_rect(colour = "black", fill = NA, size = 2),
+        panel.border = element_rect(colour = "black", fill = NA, size = 4),
         panel.background = element_rect(color = 'white', fill = NA)) +
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
-  ylim(0,.7)
+  coord_cartesian(ylim=c(0,1))
 
 # Model
-model.test3.mm <- glmer(stay2 ~ last.reinf.fac * stay1.fac + (1 + last.reinf.fac * stay1.fac | subject),
-                      family = binomial, data = df.crits)
-summary(model.test3.mm)
+model.test2.mm <- glmer(stay2 ~ last.reinf.fac * stay1.fac + (1 + last.reinf.fac * stay1.fac | subject),
+                      family = binomial, data = df.crits, contrasts = list(last.reinf.fac = contr.sum, stay1.fac = contr.sum))
+summary(model.test2.mm)
 
 
 
@@ -114,23 +117,29 @@ summary(model.test3.mm)
 
 
 # Plot
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare') %>%
+df.bysubj <- df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare') %>%
   group_by(stay1.fac, last.reinf.fac, subject) %>%
   summarize(stay2 = mean(stay2))
 
 df.agg <- df.bysubj %>%
   summarize(stay2.mean = mean(stay2), stay2.se = se(stay2))
 
-ggplot(df.agg, aes(x = stay1.fac, y = stay2.mean, group = last.reinf.fac, fill = last.reinf.fac)) +
+ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill = stay1.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "")) +
-  labs(x = "", y = "Prob of repeating action 2")
+  guides(fill = F) +
+  #labs(x = "", y = "") +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA, size = 4),
+        panel.background = element_rect(color = 'white', fill = NA)) +
+  scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
+  ylim(0,.75)
 
 # Model
-model.test4 <- lm(stay2 ~ stay1.fac * last.reinf.fac, data = df.bysubj, 
-                  contrasts = list(last.reinf.fac = contr.sum, stay1.fac = contr.sum))
-summary(model.test4)
+model.test3.mm <- glmer(stay2 ~ last.reinf.fac * stay1.fac + (1 + last.reinf.fac * stay1.fac | subject),
+                        family = binomial, data = df.crits)
+summary(model.test3.mm)
 
 
 # Tests 2 & 3 combined ----------------------------------------------------
@@ -160,28 +169,10 @@ summary(model.test34)
 
 # RT2 | common ------------------------------------------------------------
 
-
-
 df.bysubj <- df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Common') %>%
   group_by(stay1.fac, last.reinf.fac, stay2.fac, subject) %>%
   summarize(rt2 = mean(rt2))
 
-df.agg <- df.bysubj %>%
-  summarize(rt2.mean = mean(rt2), rt2.se = se(rt2))
-
-ggplot(df.agg, aes(x = last.reinf.fac, y = rt2.mean, group = stay2.fac, fill = stay2.fac)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
-  guides(fill = F) +
-  labs(x = "", y = "") +
-  facet_wrap(~ stay1.fac) + ylim(0,1000) +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-                                                  axis.text.y = element_blank(), axis.ticks.y = element_blank(),
-                                                  panel.border = element_rect(colour = "black", fill = NA, size = 2),
-        panel.background = element_rect(fill = 'white'))+
-  scale_fill_manual(values=c("#CC6666", "#9999CC", "#66CC99"))
-
-# differences version
 df.bysubj2 = df.bysubj %>% filter(stay2.fac == 'Same action2')
 for (i in 1:nrow(df.bysubj2)) {
   other = df.bysubj$subject == df.bysubj2$subject[i] & df.bysubj$last.reinf.fac == df.bysubj2$last.reinf.fac[i] & df.bysubj$stay1.fac == df.bysubj2$stay1.fac[i] & df.bysubj$stay2.fac == 'Different action2'
@@ -196,7 +187,7 @@ df.agg <- df.bysubj2 %>%
 ggplot(df.agg, aes(x = last.reinf.fac, y = rt2.mean, group = stay1.fac, fill = stay1.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
-  guides(fill = F) + ylim(-100,400) +
+  guides(fill = F) + ylim(-100,500) +
   labs(x = "", y = "") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
@@ -204,28 +195,10 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = rt2.mean, group = stay1.fac, fill = s
         panel.background = element_rect(fill = 'white'))+
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown"))
   
-model.rt = lmer(rt2 ~ stay1.fac * stay2.fac * last.reinf.fac + (1 + stay1.fac * stay2.fac * last.reinf.fac | subject), data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Common'))
+model.rt = lmer(rt2 ~ stay1.fac * stay2.fac * last.reinf.fac + (1 + stay1.fac * stay2.fac * last.reinf.fac | subject), 
+                data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Common'),
+                contrasts = list(stay1.fac = contr.sum, stay2.fac = contr.sum, last.reinf.fac = contr.sum))
 summary(model.rt)
-
-
-# RT2 | rare --------------------------------------------------------------
-
-
-
-df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare') %>%
-  group_by(stay1.fac, last.reinf.fac, stay2.fac, subject) %>%
-  summarize(rt2 = mean(rt2))
-
-df.agg <- df.bysubj %>%
-  summarize(rt2.mean = mean(rt2), rt2.se = se(rt2))
-
-ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.fac)) +
-  geom_bar(stat = "identity", position = dodge) +
-  geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
-  guides(fill = guide_legend(title = "Stage 2 choice")) +
-  labs(x = "", y = "RT of action 2") +
-  facet_wrap(~ last.reinf.fac)
-
 
 # Make modeling CSV -------------------------------------------------------
 
@@ -235,3 +208,7 @@ if (real) {
   write.table(df.crits %>% select(Action1, S2, Action2, Re, subject_id), 'Behavioral/dez_2step/v1/data_fitting.csv',
               row.names = F, col.names = F, sep = ",")
 }
+
+# Save --------------------------------------------------------------------
+
+save.image('Simulations/sims/2step_probs/sims_MB_MB.Rdata')

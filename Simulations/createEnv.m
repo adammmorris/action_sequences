@@ -8,11 +8,11 @@ clearvars
 numAgents_max = 1000;
 numRounds_max = 250;
 
-whichEnv = '1b_fix';
+whichEnv = '1b_fix_extreme';
 
 %% Set parameters
 rewardsAreProbs = false;
-if strcmp(whichEnv, '2step_probs')
+if strcmp(whichEnv, '2step_extreme')
     rewardsAreProbs = true;
 end
 

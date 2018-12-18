@@ -197,10 +197,10 @@ for thisAgent = 1:numAgents
                     S3 = states{3}(reward + 6); % to go from -5:5 to 1:11
                 end
                 
-                transition_probs(S2, choice2, S3) = transition_probs(S2, choice2, S3) + ...
-                    lr * (1 - transition_probs(S2, choice2, S3));
-                % renormalize
-                transition_probs(S2, choice2, :) = transition_probs(S2, choice2, :) / sum(transition_probs(S2, choice2, :));
+%                 transition_probs(S2, choice2, S3) = transition_probs(S2, choice2, S3) + ...
+%                     lr * (1 - transition_probs(S2, choice2, S3));
+%                 % renormalize
+%                 transition_probs(S2, choice2, :) = transition_probs(S2, choice2, :) / sum(transition_probs(S2, choice2, :));
             end
             
             RT2 = rt_cost_nonseq;

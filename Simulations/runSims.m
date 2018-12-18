@@ -1,11 +1,11 @@
 %% Parameters
-numAgents = 300;
+numAgents = 1000;
 numRounds = 125;
 env = '1b_fix';
-modelName = 'MFMB_MFMB';
+modelName = 'MFMB_noAS';
 
 whichEnv = ['env/' env '.mat'];
-whichModel = ['sims/' env '/sims_' modelName '.mat'];
+whichModel = ['sims/' env '/sims_' modelName '.csv'];
 
 % Set up their parameters
 actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
@@ -27,6 +27,10 @@ for thisSubj = 1:numAgents
         w_MB = rand();
         w_MB_AS = 1;
         use_AS = 1;
+    elseif strcmp(modelName, 'MFMB_MF')
+        w_MB = rand();
+        w_MB_AS = 0;
+        use_AS = 1;
     elseif strcmp(modelName, 'MB_MFMB')
         w_MB = 1;
         w_MB_AS = rand();
@@ -35,6 +39,10 @@ for thisSubj = 1:numAgents
         w_MB = rand();
         w_MB_AS = rand();
         use_AS = 1;
+    elseif strcmp(modelName, 'MB_noAS')
+        w_MB = 1;
+        w_MB_AS = 0;
+        use_AS = 0;
     end
     
     actualParams(thisSubj,:) = [lr temp1 temp2 stay w_MB w_MB_AS use_AS];
@@ -44,12 +52,12 @@ load(whichEnv);
 results_all = runModel(envInfo, actualParams);
 
 %% Get earnings
-%earnings = zeros(numAgents, 1);
-%for i = 1:numAgents
-%    earnings(i) = sum(results_all((numRounds * (i - 1) + 1) : (numRounds * i), 4));
-%end
-%mean(earnings)
-% std(earnings) / sqrt(numAgents)
+earnings = zeros(numAgents, 1);
+for i = 1:numAgents
+   earnings(i) = sum(results_all((numRounds * (i - 1) + 1) : (numRounds * i), 4));
+end
+mean(earnings)
+std(earnings) / sqrt(numAgents)
 
 %% Write data
 if strcmp(whichModel((end-2):end), 'csv')
