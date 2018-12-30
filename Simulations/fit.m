@@ -1,9 +1,9 @@
 clearvars
 addpath 'utilities'
-datapath = 'fitting/1b_fix/real3/';
-envpath = 'env/1b_fix.mat';
+datapath = 'fitting/1b_fix_extreme/real3/';
+envpath = 'env/1b_fix_extreme.mat';
 numStarts = 10;
-numSubj = 201;
+numSubj = 197;
 
 priors = {@(x) log(betapdf(x, 1.1, 1.1)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(gampdf(x, 1.2, 5)), @(x) log(normpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1)), @(x) log(unifpdf(x, 0, 1))};
 

@@ -24,13 +24,14 @@ if (real) {
   subjlist = df.demo$subject
   df <- read.csv('Behavioral/1b_fix/v3/real/data.csv') %>% tbl_df %>% filter(subject %in% subjlist) %>% arrange(subject) %>% mutate(round = trial_index)
 } else {
-  df <- read.csv('Simulations/sims/1b_fix/sims_MFMB_MFMB.csv') %>% tbl_df %>% arrange(subject)
+  df <- read.csv('Simulations/sims/1b_fix/sims_MFMB_MB.csv') %>% tbl_df %>% arrange(subject)
 }
 
 ## Exclusion
 if (real) {
   exclude.subj <- as.character(df.demo$subject[(df.demo$reading_time / 60000) < 1])
   exclude.subj <- c(exclude.subj, setdiff(as.character(df.demo$subject[df.demo$belief2 != 0 | df.demo$belief3 != 0]), exclude.subj))
+  exclude.subj <- c(exclude.subj, 'A1MUEKEQQVROE7') # he glitched
   df <- df %>% filter(!(as.character(subject) %in% exclude.subj))
 }
 
@@ -52,6 +53,13 @@ if (real | !rewardsAreProbs) {
 } else {
   df.crits = df.crits %>% mutate(last.reinf.fac = factor(last.reinf > 0, c(T,F), c("+", "-")))
 }
+
+df.crits = df.crits %>% mutate(
+  stay1.fac.num = as.numeric(stay1.fac),
+  stay2.fac.num = as.numeric(stay2.fac),
+  last.reinf.fac.num = as.numeric(last.reinf.fac),
+  last.common.num = as.numeric(last.common)
+)
 
 if (real) {
   df.crits = df.crits %>%
@@ -148,8 +156,9 @@ anovaBF(stay2 ~ stay1.fac * last.reinf.fac, data = df.bysubj, whichModels = "top
 
 # Tests 2 & 3 combined ----------------------------------------------------
 
+mfers = c(1,2,5,9,13,14,21,24,25,26,30,31,32,33,36,37,38,47,48,49,50,51,52,53,54,57,59,60,62,63,64,68,70,73,75,76,77,78,79,80,82,84,85,90,92,95,96,99,100,101,102,105,107,111,112,113,116,117,118,119,125,126,127,138,141,142,143,144,145,146,148,149,150,151,157,158,159,161,162,164,166,167,170,171,181,182,183,186,189,192,194,197)
 
-df.bysubj <- df.crits %>% filter(sameS2 == 'Different S2') %>%
+df.bysubj <- df.crits %>% filter(sameS2 == 'Different S2', (subject_id %in% mfers)) %>%
   group_by(stay1.fac, last.reinf.fac, last.common, subject) %>%
   summarize(stay2 = mean(stay2))
 
@@ -169,17 +178,13 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill =
   facet_wrap(~ last.common) +
   ylim(0,1)
 
-# figure this out...
-model.test4.mm2 <- glmer(stay2 ~ stay1.fac * last.reinf.fac * last.common + (stay1|subject), family = binomial,
-                        data = df.crits %>% filter(sameS2 == 'Different S2'),
-                        contrasts = list(stay1.fac = contr.sum, last.reinf.fac = contr.sum, last.common = contr.sum))
-model.test4.mm <- glmer(stay2 ~ stay1.fac * last.reinf.fac * last.common + (1+stay1.fac * last.reinf.fac * last.common||subject), family = binomial,
-                        data = df.crits %>% filter(sameS2 == 'Different S2'), contrasts = list(stay1.fac = contr.sum, last.reinf.fac = contr.sum, last.common = contr.sum))
-
-summary(model.test4.mm2)
+# have to convert factors to numerical versions for this one to get around lmer bug w/ uncorrelated factor random variables
+model.test4.mm <- glmer(stay2 ~ stay1.fac.num * last.reinf.fac.num * last.common.num + (stay1.fac.num*last.reinf.fac.num*last.common.num||subject), family = binomial,
+                        data = df.crits %>% filter(sameS2 == 'Different S2'))
+summary(model.test4.mm)
 
 
-# RT2 ---------------------------------------------------------------------
+ # RT2 ---------------------------------------------------------------------
 
 
 
@@ -198,6 +203,10 @@ ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.
   labs(x = "", y = "RT of action 2") +
   facet_wrap(~ last.reinf.fac)
 
+model.rt.common = lmer(rt2 ~ stay1.fac.num * stay2.fac.num * last.reinf.fac.num + (stay1.fac.num * stay2.fac.num * last.reinf.fac.num || subject),
+                     data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Common'))
+summary(model.rt.common)
+
 # After rare
 df.bysubj <- df.crits %>% filter(last.reinf.fac != '0' & sameS2 == 'Different S2' & last.common == 'Rare') %>%
   group_by(stay1.fac, last.reinf.fac, stay2.fac, subject) %>%
@@ -212,6 +221,11 @@ ggplot(df.agg, aes(x = stay1.fac, y = rt2.mean, group = stay2.fac, fill = stay2.
   guides(fill = guide_legend(title = "Stage 2 choice")) +
   labs(x = "", y = "RT of action 2") +
   facet_wrap(~ last.reinf.fac)
+
+model.rt.rare = lmer(rt2 ~ stay1.fac.num * stay2.fac.num * last.reinf.fac.num + (stay1.fac.num * stay2.fac.num * last.reinf.fac.num || subject),
+                     data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'))
+summary(model.rt.rare)
+
 
 # differences
 
@@ -235,7 +249,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = rt2.mean, group = stay1.fac, fill = s
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = rt2.mean + rt2.se, ymin = rt2.mean - rt2.se), width = .5, position = dodge) +
   guides(fill = F) +
-  labs(x = "", y = "") + ylim(-150,250)+
+  labs(x = "", y = "") + ylim(-150,300)+
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
@@ -243,18 +257,8 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = rt2.mean, group = stay1.fac, fill = s
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
   facet_wrap(~ last.common)
 
-# model.rt = lmer(rt2 ~ stay1.fac * stay2.fac * last.reinf.fac + (1 + stay1.fac * stay2.fac * last.reinf.fac | subject), data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Common'))
-# summary(model.rt)
-
-model.rt.rare = lm(rt2.diff ~ stay1.fac * last.pe2.fac, data = df.bysubj2 %>% filter(last.common == 'Rare'))
-model.rt.rare.null = lm(rt2.diff ~ stay1.fac + last.reinf.fac, data = df.bysubj2 %>% filter(last.common == 'Rare'))
-summary(model.rt.rare)
-exp((BIC(model.rt.rare) - BIC(model.rt.rare.null)) / 2)
-
-model.rt.common = lm(rt2.diff ~ stay1.fac * last.pe2.fac, data = df.bysubj2 %>% filter(last.common == 'Common'))
-summary(model.rt.common)
-
-model.rt = lm(rt2.diff ~ stay1.fac * last.reinf.fac * last.common, data = df.bysubj2)
+model.rt = lmer(rt2 ~ stay1.fac.num * stay2.fac.num * last.reinf.fac.num * last.common.num + (stay1.fac.num * stay2.fac.num * last.reinf.fac.num * last.common.num || subject),
+                     data = df.crits %>% filter(sameS2 == 'Different S2'))
 summary(model.rt)
 
 

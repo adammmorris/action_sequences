@@ -5,7 +5,7 @@
 %% setup
 envName = '1b_fix';
 whichEnv = ['env/' envName '.mat'];
-simsName = 'real3';
+simsName = 'sims_MFMB_MFMB';
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];
@@ -62,4 +62,4 @@ for i = 1:numModels
 end
 
 %% run comparison
-compareModels_bayes(optParams(whichModels), details, 1, LLs_chance);
+compareModels_bayes(optParams(whichModels), details, 2, LLs_chance);
