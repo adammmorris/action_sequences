@@ -1,11 +1,11 @@
 %% Parameters
-numAgents = 1000;
+numAgents = 300;
 numRounds = 125;
-env = '1b_fix';
+env = '2step_extreme';
 modelName = 'MFMB_noAS';
 
 whichEnv = ['env/' env '.mat'];
-whichModel = ['sims/' env '/sims_' modelName '.csv'];
+whichModel = ['sims/' env '/sims_' modelName '.mat'];
 
 % Set up their parameters
 actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]

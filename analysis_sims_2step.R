@@ -200,6 +200,37 @@ model.rt = lmer(rt2 ~ stay1.fac * stay2.fac * last.reinf.fac + (1 + stay1.fac * 
                 contrasts = list(stay1.fac = contr.sum, stay2.fac = contr.sum, last.reinf.fac = contr.sum))
 summary(model.rt)
 
+ 
+
+# Check continuity --------------------------------------------------------
+
+# Plot
+df.bysubj <- df.crits %>% 
+  filter(last.common == 'Common') %>%
+  group_by(last.reinf, subject) %>%
+  summarize(stay1 = mean(stay1))
+
+df.agg <- df.bysubj %>%
+  summarize(stay1.mean = mean(stay1), stay1.se = se(stay1))
+
+ggplot(df.agg, aes(x = last.reinf, y = stay1.mean)) +
+  geom_point(stat = "identity", position = dodge) +
+  geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
+  guides(fill = F) +
+  geom_smooth(method='lm') +
+  labs(x = "", y = "")+coord_cartesian(ylim=c(0,1))+
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+    axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA, size = 2),
+    panel.background = element_rect(color = 'white', fill = NA))
+
+# Models
+model.daw.mm <- glmer(stay1 ~ last.reinf.fac + (1 + last.reinf.fac | subject), family = binomial,
+                      data = df.crits %>% filter(last.common == 'Rare'), contrasts = list(last.reinf.fac = contr.sum))
+summary(model.daw.mm)
+
+
+
 # Make modeling CSV -------------------------------------------------------
 
 
