@@ -3,9 +3,9 @@
 % models.
 
 %% setup
-envName = '1b_fix';
+envName = 'expt1'; % either 'expt1' or 'expt2', depending on which experiment you want
 whichEnv = ['env/' envName '.mat'];
-simsName = 'sims_MFMB_MFMB';
+simsName = 'data'; % if you want the fits to human data, put 'data'; if you want the fits to a model simulation, put 'sims_<model-name>' (see the folders in 'fitting')
 
 main = ['fitting/' envName '/' simsName];
 datapath = [main '/data.mat'];

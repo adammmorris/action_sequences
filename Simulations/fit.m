@@ -1,7 +1,7 @@
 clearvars
 addpath 'utilities'
-datapath = 'fitting/1b_fix_extreme/real3/';
-envpath = 'env/1b_fix_extreme.mat';
+datapath = 'fitting/expt2/data/';
+envpath = 'env/expt2.mat';
 numStarts = 10;
 numSubj = 197;
 

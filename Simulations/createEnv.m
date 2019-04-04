@@ -1,5 +1,5 @@
 %% createEnv
-% Creates the environment for "model.m".
+% Creates the task environments.
 
 clearvars
 
@@ -8,22 +8,25 @@ clearvars
 numAgents_max = 1000;
 numRounds_max = 250;
 
-whichEnv = '2step_extreme';
+% possible environments are: expt1 (normal setup for experiment 1),
+% expt1_binary (experiment 1 w/ binary rewards), expt1_rbterm (experiment 1
+% w/ a reward-based terminal state representation), expt2, and expt2_rbterm
+whichEnv = 'expt1';
 
 %% Set parameters
 rewardsAreProbs = false;
-% if strcmp(whichEnv, '2step_extreme')
-%     rewardsAreProbs = true;
-% end
+if strcmp(whichEnv, 'expt1_binary')
+    rewardsAreProbs = true;
+end
 
-extremeRep = false;
-if strcmp(whichEnv, '2step_probs') || strcmp(whichEnv, '2step_extreme') || strcmp(whichEnv, '1b_fix_extreme') 
-    extremeRep = true;
+rbTerm = false; % rbTerm stands for "reward-based terminal state representation"
+if strcmp(whichEnv, 'expt1_binary') || strcmp(whichEnv, 'expt1_rbterm') || strcmp(whichEnv, 'expt1_rbterm') 
+    rbTerm = true;
 end
 
 %% Set up states/actions
 
-if strcmp(whichEnv, '2step') % The task from Dezfouli & Balleine's 2013 PLoS CB paper
+if strcmp(whichEnv, 'expt1') % The task from Dezfouli & Balleine's 2013 PLoS CB paper
     states = {1, 2:3, 4:7};
     % For each state, what actions are available?
     actions = {1:6, 1:2, 1:2, 0, 0, 0, 0};
@@ -33,22 +36,22 @@ if strcmp(whichEnv, '2step') % The task from Dezfouli & Balleine's 2013 PLoS CB 
     % For every sequence index in S1 (rows), gives the appropriate action for every stage
     % (columns). Zero indicates that the sequence has ended.
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];
-elseif strcmp(whichEnv, '2step_probs')
+elseif strcmp(whichEnv, 'expt1_binary')
     states = {1, 2:3, 4:5};
     actions = {1:6, 1:2, 1:2, 0, 0};
     sequences = {3:6, 0, 0, 0, 0};
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];
-elseif strcmp(whichEnv, '2step_extreme')
+elseif strcmp(whichEnv, 'expt1_rbterm')
     states = {1, 2:3, 4:14};
     actions = {1:6, 1:2, 1:2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];
-elseif strcmp(whichEnv, '1b_fix')
+elseif strcmp(whichEnv, 'expt2')
     states = {1, 2:4, 5:9};
     actions = {1:6, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0};
     sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0]; 
-elseif strcmp(whichEnv, '1b_fix_extreme')
+elseif strcmp(whichEnv, 'expt2_rbterm')
     states = {1, 2:4, 5:15};
     actions = {1:6, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -73,7 +76,7 @@ end
 likelyTransition = zeros(numStates, numActions);
 unlikelyTransition = zeros(1, numActions); % we currently only allow stochastic transitions from stage 1's single state
 
-if strcmp(whichEnv, '2step')
+if strcmp(whichEnv, 'expt1')
     transitionProb = .8;
 
     likelyTransition(1, 1) = 2; % actions
@@ -91,14 +94,14 @@ if strcmp(whichEnv, '2step')
     unlikelyTransition(1, 4) = 7;
     unlikelyTransition(1, 5) = 4;
     unlikelyTransition(1, 6) = 5; 
-elseif strcmp(whichEnv, '2step_probs') || strcmp(whichEnv, '2step_extreme')
+elseif strcmp(whichEnv, 'expt1_binary') || strcmp(whichEnv, 'expt1_rbterm')
     transitionProb = .8;
 
     likelyTransition(1, 1) = 2;
     likelyTransition(1, 2) = 3;
     unlikelyTransition(1, 1) = 3;
     unlikelyTransition(1, 2) = 2;
-elseif strcmp(whichEnv, '1b_fix')
+elseif strcmp(whichEnv, 'expt2')
     transitionProb = .8;
     
     likelyTransition(1, 1) = 2; % actions
@@ -117,7 +120,7 @@ elseif strcmp(whichEnv, '1b_fix')
     unlikelyTransition(1, 4) = 9;
     unlikelyTransition(1, 5) = 9;
     unlikelyTransition(1, 6) = 9;
-elseif strcmp(whichEnv, '1b_fix_extreme')
+elseif strcmp(whichEnv, 'expt2_rbterm')
     transitionProb = .8;
 
     likelyTransition(1, 1) = 2;
@@ -129,7 +132,7 @@ end
 % Transition prob matrix
 transition_probs = zeros(numStates, numActions, numStates);
 
-if extremeRep
+if rbTerm
     % stage 1 actions
     for j = setdiff(actions{1}, sequences{1})
         transition_probs(1, j, likelyTransition(1, j)) = transitionProb;
@@ -166,7 +169,7 @@ end
 
 %% Rewards
 
-if extremeRep
+if rbTerm
     numDist = length(states{2}) * 2;
     rewardStates = 1:numDist; % assumes 2 actions per stage 2 state
     rewards = zeros(numRounds_max, numDist, numAgents_max);
@@ -208,5 +211,5 @@ else
 end
 
 %% Save
-envInfo = {states, actions, sequences, sequences_def, transition_probs, rewards, rewardsAreProbs, extremeRep, numAgents_max};
+envInfo = {states, actions, sequences, sequences_def, transition_probs, rewards, rewardsAreProbs, rbTerm, numAgents_max};
 save(['env/' whichEnv '.mat'], 'envInfo');

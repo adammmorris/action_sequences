@@ -1,5 +1,5 @@
 %% model
-% Simulates RL agents on a two-stage environment.
+% Simulates the model.
 
 %% Inputs
 % envInfo: struct with 9 elements, {states actions sequences

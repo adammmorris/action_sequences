@@ -1,7 +1,16 @@
+%% runSims.m
+% Runs simulations.
+
 %% Parameters
 numAgents = 300;
 numRounds = 125;
-env = '2step_extreme';
+env = 'expt1';
+
+% The model-naming convention is as follows:
+% <[MF, MB, MFMB]>_<[MF, MB, MFMB, noAS]>
+% The first half indicates type of control of single-step actions.
+% The second half indicates control of action sequences (or noAS if
+% there are no action sequences).
 modelName = 'MFMB_noAS';
 
 whichEnv = ['env/' env '.mat'];
@@ -51,15 +60,7 @@ end
 load(whichEnv);
 results_all = runModel(envInfo, actualParams);
 
-%% Get earnings
-earnings = zeros(numAgents, 1);
-for i = 1:numAgents
-   earnings(i) = sum(results_all((numRounds * (i - 1) + 1) : (numRounds * i), 4));
-end
-mean(earnings)
-std(earnings) / sqrt(numAgents)
-
-%% Write data
+%% Save data
 if strcmp(whichModel((end-2):end), 'csv')
     % For R
     csvwrite_with_headers(whichModel, results_all, {'Action1', 'S2', 'Action2', 'Re', 'subject', 'round', 'rt2'});
