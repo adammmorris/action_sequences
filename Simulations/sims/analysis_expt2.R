@@ -14,8 +14,8 @@ dodge <- position_dodge(width=0.9)
 
 
 # Import data -------------------------------------------------------------
-
-df <- read.csv('expt2/sims_MFMB_MB.csv') %>% tbl_df %>% arrange(subject)
+path = 'expt2/elig/sims_MFMB_MB'
+df <- read.csv(paste0(path, '.csv')) %>% tbl_df %>% arrange(subject)
 
 df.crits <- df %>%
   mutate(
@@ -53,7 +53,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, fill = last.reinf.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
   guides(fill = F) +
-  labs(x = "", y = "")+coord_cartesian(ylim=c(0,1))+
+  labs(x = "", y = "")+coord_cartesian(ylim=c(.5, .8))+
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
@@ -63,7 +63,6 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, fill = last.reinf.fac)) +
 model1 <- glmer(stay1 ~ last.reinf + (1 + last.reinf | subject), family = binomial,
                 data = df.crits %>% filter(last.common == 'Rare'))
 summary(model1)
-
 
 
 # Test 2: Stay2 ~ Stay1 x Last.Reinf | Different S2, Last Common ----------
@@ -87,13 +86,12 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill =
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
         panel.background = element_rect(colour = "white", fill = NA)) +
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
-  coord_cartesian(ylim=c(0,1))
+  coord_cartesian(ylim=c(.2,.8))
 
 # Model
 model2 <- glmer(stay2 ~ stay1.fac * last.reinf + (1 + stay1.fac * last.reinf | subject), data = df.crits, 
                 family = binomial, contrasts = list(stay1.fac = contr.sum))
 summary(model2)
-
 
 
 # Test 3: Stay2 ~ Stay1 x Last.Reinf | Different S2, Last Rare ------------
@@ -116,18 +114,17 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill =
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
         panel.background = element_rect(colour = "white", fill = NA)) +
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
-  coord_cartesian(ylim=c(0,1))
+  coord_cartesian(ylim=c(.2,.8))
 
 # Model
 model3 <- glmer(stay2 ~ stay1.fac * last.reinf + (1 + stay1.fac * last.reinf | subject), family = binomial,
                 data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'),
                 contrasts = list(stay1.fac = contr.sum))
 summary(model3)
-# hard to compute a bayes factor for the mixed-effects model, so we'll do it for the simpler model (where all of each subject's choices are averaged together)
-model3.bf = generalTestBF(stay2 ~ stay1.fac * last.reinf,
-                          data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare') %>% group_by(stay1.fac, last.reinf, subject) %>% summarize(stay2 = mean(stay2)),
-                          whichModels = "top")
-summary(model3.bf)
+model3.null <- glmer(stay2 ~ stay1.fac+ last.reinf + (1 + stay1.fac * last.reinf | subject), family = binomial,
+                data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'),
+                contrasts = list(stay1.fac = contr.sum))
+exp((BIC(model3) - BIC(model3.null)) / 2)
 
 # Test 4: interaction between 2 & 3 ----------------------------------------------------
 
@@ -141,15 +138,14 @@ df.agg <- df.bysubj %>%
 ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill = stay1.fac)) +
   geom_bar(stat = "identity", position = dodge) +
   geom_errorbar(aes(ymax = stay2.mean + stay2.se, ymin = stay2.mean - stay2.se), width = .5, position = dodge) +
-  guides(fill = F) +
-  labs(x = "", y = "") +
+  #guides(fill = F) +
+  #labs(x = "", y = "") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
         panel.background = element_rect(colour = "white", fill = NA)) +
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
-  facet_wrap(~ last.common) +
-  ylim(0,1)
+  facet_wrap(~ last.common)
 
 # have to convert factors to numerical versions for this one to get around lmer bug w/ uncorrelated factor random effects
 # (the random effects have to be uncorrelated to get this one to converge)
@@ -157,3 +153,6 @@ model4 <- glmer(stay2 ~ stay1.fac.num * last.reinf * last.common.num + (stay1.fa
                 data = df.crits %>% filter(sameS2 == 'Different S2'))
 summary(model4)
 
+# save analysis -----------------------------------------------------------
+
+save.image(paste0(path, '.rdata'))

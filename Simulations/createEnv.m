@@ -11,7 +11,7 @@ numRounds_max = 250;
 % possible environments are: expt1 (normal setup for experiment 1),
 % expt1_binary (experiment 1 w/ binary rewards), expt1_rbterm (experiment 1
 % w/ a reward-based terminal state representation), expt2, and expt2_rbterm
-whichEnv = 'expt1';
+whichEnv = 'expt1_inaccurate';
 
 %% Set parameters
 rewardsAreProbs = false;
@@ -56,6 +56,11 @@ elseif strcmp(whichEnv, 'expt2_rbterm')
     actions = {1:6, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences = {3:6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     sequences_def = [0 0 0; 0 0 0; 1 1 0; 1 2 0; 2 1 0; 2 2 0];     
+elseif strcmp(whichEnv, 'expt1_inaccurate')
+    states = {1, 2:5, 6:13};
+    actions = {1:2, 1:2, 1:2, 1:2, 1:2, 0, 0, 0, 0, 0, 0, 0, 0};
+    sequences = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    sequences_def = [];
 end
 
 numStates = max([states{:}]);
@@ -127,6 +132,18 @@ elseif strcmp(whichEnv, 'expt2_rbterm')
     likelyTransition(1, 2) = 3;
     unlikelyTransition(1, 1) = 4;
     unlikelyTransition(1, 2) = 4;
+elseif strcmp(whichEnv, 'expt1_inaccurate')
+    transitionProb = .8;
+    
+    likelyTransition(1, 1) = 2; % actions
+    likelyTransition(1, 2) = 3;
+    likelyTransition(2, actions{2}) = [6 7];
+    likelyTransition(3, actions{3}) = [8 9];
+    likelyTransition(4, actions{4}) = [10 11];
+    likelyTransition(5, actions{5}) = [12 13];
+
+    unlikelyTransition(1, 1) = 4;
+    unlikelyTransition(1, 2) = 5;
 end
 
 % Transition prob matrix

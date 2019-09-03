@@ -38,7 +38,6 @@ df.crits <- df %>%
 
 # Test 1: Stay1 ~ Common X Reinf ------------------------------------------
 
-
 # Plot
 df.bysubj <- df.crits %>% group_by(last.reinf.fac, last.common, subject) %>%
   summarize(stay1 = mean(stay1))
@@ -126,7 +125,16 @@ model3 = lmer(rt2 ~ stay1.fac * stay2.fac * last.reinf + (1 + stay1.fac * stay2.
                 contrasts = list(stay1.fac = contr.sum, stay2.fac = contr.sum))
 summary(model3)
 
- 
+# Show RT distribution
+ggplot(df.crits, aes(x = rt2, group = stay1.fac, fill = stay1.fac)) +
+  geom_histogram(alpha = .6, position = 'identity') +
+  xlab('') + ylab('') +
+  scale_y_continuous(labels = NULL, breaks = NULL) +
+  scale_x_continuous(breaks = c(0,1000,2000), limits = c(0,2200)) +
+  facet_wrap(~ last.common + last.reinf.fac) +
+  theme(strip.text.x = element_blank(), legend.position = 'none') +
+  scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown"))
+
 
 # Check whether people are treating rewards as graded --------------------------------------------------------
 
@@ -160,7 +168,7 @@ AIC(model.cont) - AIC(model.cont.null)
 
 # Make CSV for model fitting -------------------------------------------------------
 
-write.table(df.crits %>% select(Action1, S2, Action2, Re, subject_id), 'Behavioral/dez_2step/v1/data_fitting.csv',
+write.table(df.crits %>% select(Action1, S2, Action2, Re, subject_id), 'expt1/data_fitting.csv',
             row.names = F, col.names = F, sep = ",")
 
 # Save --------------------------------------------------------------------

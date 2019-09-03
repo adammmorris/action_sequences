@@ -30,15 +30,15 @@ if (whichSubj < 1 || whichSubj > numSubjects)
 end
 
 % Do params
-% [lr temp1 temp2 stay w_MB w_MB_AS use_AS]
-K_PARAM_IND = [false false false false false false true];
+% [lr temp1 temp2 stay elig w_MB w_MB_AS use_AS]
+K_PARAM_IND = [false false false false false false false true];
 
 freeParams = fixedParams == -10;
 freeParams_noK = freeParams;
 freeParams_noK(K_PARAM_IND) = false;
 nFreeParams = sum(freeParams);
 nContFreeParams = sum(freeParams_noK);
-bounds = [0 0 0 -5 0 0 0; 1 10 10 5 1 1 1];
+bounds = [0 0 0 -5 0 0 0 0; 1 10 10 5 1 1 1 1];
 
 % Calculate starts
 starts = zeros(numStarts, nContFreeParams);
@@ -95,6 +95,7 @@ else
     logposts_starts = zeros(numStarts, 1);
     params_starts = zeros(numStarts, nFreeParams);
     
+    disp(['Fitting subject ' num2str(whichSubj)]);
     for thisStart = 1:numStarts
         [params_starts(thisStart, :), logposts_starts(thisStart)] = ...
             fmincon(f, starts(thisStart, :), [], [], [], [], ...

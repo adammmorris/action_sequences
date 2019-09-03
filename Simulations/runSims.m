@@ -2,27 +2,28 @@
 % Runs simulations.
 
 %% Parameters
-numAgents = 300;
+numAgents = 1000;
 numRounds = 125;
-env = 'expt1';
+env = 'expt2';
 
 % The model-naming convention is as follows:
 % <[MF, MB, MFMB]>_<[MF, MB, MFMB, noAS]>
 % The first half indicates type of control of single-step actions.
 % The second half indicates control of action sequences (or noAS if
 % there are no action sequences).
-modelName = 'MFMB_noAS';
+modelName = 'MFMB_MB';
 
 whichEnv = ['env/' env '.mat'];
-whichModel = ['sims/' env '/sims_' modelName '.mat'];
+whichModel = ['sims/' env '/elig/sims_' modelName '.csv'];
 
 % Set up their parameters
-actualParams = zeros(numAgents, 7); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
+actualParams = zeros(numAgents, 8); % [lr, temp1, temp2, stay, w_MB, w_MBAS, use_AS]
 for thisSubj = 1:numAgents
     lr = betarnd(1.1,1.1);
     temp1 = gamrnd(1.2,5);
     temp2 = gamrnd(1.2,5);
     stay = normrnd(0,1);
+    elig = rand();
     
     if strcmp(modelName, 'MFMB_noAS')
         w_MB = rand();
@@ -48,13 +49,13 @@ for thisSubj = 1:numAgents
         w_MB = rand();
         w_MB_AS = rand();
         use_AS = 1;
-    elseif strcmp(modelName, 'MB_noAS')
-        w_MB = 1;
+    elseif strcmp(modelName, 'MF_MF')
+        w_MB = 0;
         w_MB_AS = 0;
-        use_AS = 0;
+        use_AS = 1;
     end
     
-    actualParams(thisSubj,:) = [lr temp1 temp2 stay w_MB w_MB_AS use_AS];
+    actualParams(thisSubj,:) = [lr temp1 temp2 stay elig w_MB w_MB_AS use_AS];
 end
 
 load(whichEnv);

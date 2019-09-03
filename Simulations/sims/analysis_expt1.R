@@ -15,7 +15,8 @@ dodge <- position_dodge(width=0.9)
 # Import data -------------------------------------------------------------
 
 # You can change this to whichever simulation you want to analyze.
-df <- read.csv('expt1/sims_MB_MB.csv') %>% tbl_df %>% arrange(subject)
+path = 'expt1/bargh/sims_MFMB_noAS'
+df <- read.csv(paste0(path, '.csv')) %>% tbl_df %>% arrange(subject)
 
 df.crits <- df %>%
   mutate(
@@ -46,7 +47,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill
   geom_errorbar(aes(ymax = stay1.mean + stay1.se, ymin = stay1.mean - stay1.se), width = .5, position = dodge) +
   guides(fill = F) +
   labs(x = "", y = "") +
-  coord_cartesian(ylim=c(0,1)) +
+  coord_cartesian(ylim=c(.4,.7)) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.text.y = element_blank(), axis.ticks.y = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA, size = 2),
@@ -56,8 +57,6 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay1.mean, group = last.common, fill
 model1 <- glmer(stay1 ~ last.reinf * last.common + (1 + last.reinf * last.common | subject),
                 family = binomial, data = df.crits, contrasts = list(last.common = contr.sum))
 summary(model1)
-
-
 
 # Test 2: Stay2 ~ Stay1 x Last.Reinf | Different S2, Last Common ----------
 
@@ -79,7 +78,7 @@ ggplot(df.agg, aes(x = last.reinf.fac, y = stay2.mean, group = stay1.fac, fill =
         panel.border = element_rect(colour = "black", fill = NA, size = 4),
         panel.background = element_rect(color = 'white', fill = NA)) +
   scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown")) +
-  coord_cartesian(ylim=c(0,1))
+  coord_cartesian(ylim=c(.2,.8))
 
 # Model
 model2 <- glmer(stay2 ~ last.reinf * stay1.fac + (1 + last.reinf * stay1.fac | subject),
@@ -87,3 +86,6 @@ model2 <- glmer(stay2 ~ last.reinf * stay1.fac + (1 + last.reinf * stay1.fac | s
 summary(model2)
 
 
+# Save analysis ---------------------------------------------------------------
+
+save.image(paste0(path, '.RData'))

@@ -5,7 +5,7 @@ function [logp, logl] = posterior(envInfo, results, freeParams, fixedParams, pri
 logl = likelihood(envInfo, results, freeParams, fixedParams);
 logp = logl;
 
-whichParams = find(fixedParams == -1);
+whichParams = find(fixedParams == -10);
 for k = 1:length(whichParams)
     logp = logp + priorPDFs{whichParams(k)}(freeParams(k));
 end

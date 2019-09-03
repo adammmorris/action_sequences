@@ -4,10 +4,7 @@
 %% Inputs
 % envInfo: struct with 9 elements, {states actions sequences
 % sequences_def transition_probs rewards rewardsAreProbs extremeRep numAgents_max}
-% params (numAgents x 10): [lr temp1 temp2 stay w_MB_AS w_MB use_AS lr_trans
-% lr_miller]
-% numRounds: how many rounds to run
-% debug: output debugging info?
+% params (numAgents x 8): [lr temp1 temp2 stay elig w_MB_AS w_MB use_AS]
 
 %% Outputs
 % results: [A1 S2 A2 RT2 Re subjectId]
@@ -56,15 +53,16 @@ for thisAgent = 1:numAgents
     temp1 = params(thisAgent, 2);
     temp2 = params(thisAgent, 3);
     stay = params(thisAgent, 4);
-    elig = 1;
+    %elig = 0;
+    elig = params(thisAgent, 5);
     rt_cost_nonseq = 1;
     
     % Weights
-    w_MB = params(thisAgent, 5); % % of non-AS valuation done in MB way
+    w_MB = params(thisAgent, 6); % % of non-AS valuation done in MB way
     w_MF = 1 - w_MB; % % done in MF way
-    w_MB_AS = params(thisAgent, 6); % % of AS valuation done in MB way
+    w_MB_AS = params(thisAgent, 7); % % of AS valuation done in MB way
     w_MF_AS = 1 - w_MB_AS; % % done in MF way
-    use_AS = params(thisAgent, 7); % relative weighting on action sequences
+    use_AS = params(thisAgent, 8); % relative weighting on action sequences
     
     Q_MB = zeros(numStates,numActions);
     Q_MF = zeros(numStates,numActions);
@@ -262,20 +260,22 @@ for thisAgent = 1:numAgents
         likelihood(thisAgent) = likelihood(thisAgent) + log(probs(S2_choices == choice2));
         
         %% Update algorithms
-        executedSeq = find(sequences_def(:, 1) == action1 & sequences_def(:,2) == action2);
         
         % Update MF
         % First choice
-        Q_MF(S1, action1) = Q_MF(S1, action1) + lr * (max(Q_MF(S2, S2_choices)) - Q_MF(S1, action1));
+        Q_MF(S1, choice1) = Q_MF(S1, choice1) + lr * (max(Q_MF(S2, S2_choices)) - Q_MF(S1, choice1));
 
         % Second choice
-        delta = reward_normed - Q_MF(S2, action2);
-        Q_MF(S2, action2) = Q_MF(S2, action2) + lr * delta;
-        Q_MF(S1, action1) = Q_MF(S1, action1) + lr * elig * delta;
+        delta = reward_normed - Q_MF(S2, choice2);
+        Q_MF(S2, choice2) = Q_MF(S2, choice2) + lr * delta;
+        Q_MF(S1, choice1) = Q_MF(S1, choice1) + lr * elig * delta;
             
         % Sequence
-        Q_MF(S1, executedSeq) = Q_MF(S1, executedSeq) + lr * (reward_normed - Q_MF(S1, executedSeq));
-
+        if any(choice1 == S1_actions)
+            executedSeq = find(sequences_def(:, 1) == action1 & sequences_def(:,2) == action2);
+            Q_MF(S1, executedSeq) = Q_MF(S1, executedSeq) + lr * (reward_normed - Q_MF(S1, executedSeq));
+        end
+        
         % Update MB
         if extremeRep
             transition_probs(S2, action2, S3) = transition_probs(S2, action2, S3) + ...

@@ -48,14 +48,14 @@ lr = params(1);
 temp1 = params(2);
 temp2 = params(3);
 stay = params(4);
-elig = 1;
+elig = params(5);
 
 % Weights
-w_MB = params(5); % % of non-AS valuation done in MB way
+w_MB = params(6); % % of non-AS valuation done in MB way
 w_MF = 1 - w_MB; % % done in MF way
-w_MB_AS = params(6); % % of AS valuation done in MB way
+w_MB_AS = params(7); % % of AS valuation done in MB way
 w_MF_AS = 1 - w_MB_AS; % % done in MF way
-use_AS = params(7); % relative weighting on action sequences
+use_AS = params(8); % relative weighting on action sequences
 
 Q_MB = zeros(numStates, numActions);
 Q_MF = zeros(numStates, numActions);
@@ -198,9 +198,7 @@ for thisRound=1:numRounds
     executedSeq = find(sequences_def(:, 1) == action1 & sequences_def(:,2) == action2);
     
     % Update MF
-    % First choice
-    Q_MF(S1, action1) = Q_MF(S1, action1) + lr * (max(Q_MF(S2, S2_choices)) - Q_MF(S1, action1));
-    
+    % First choice we already did above
     % Second choice
     delta = reward_normed - Q_MF(S2, action2);
     Q_MF(S2, action2) = Q_MF(S2, action2) + lr * delta;

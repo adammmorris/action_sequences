@@ -28,6 +28,7 @@ exclude.subj <- as.character(df.demo$subject[(df.demo$reading_time / 60000) < 1]
 exclude.subj <- c(exclude.subj, setdiff(as.character(df.demo$subject[df.demo$belief2 != 0 | df.demo$belief3 != 0]), exclude.subj))
 exclude.subj <- c(exclude.subj, 'A1MUEKEQQVROE7') # (s)he glitched
 df <- df %>% filter(!(as.character(subject) %in% exclude.subj))
+df.demo.filt <- df.demo %>% filter(!(as.character(subject) %in% exclude.subj))
 
 df.crits <- df %>%
   mutate(
@@ -135,11 +136,10 @@ model3 <- glmer(stay2 ~ stay1.fac * last.reinf + (1 + stay1.fac * last.reinf | s
                         data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'),
                         contrasts = list(stay1.fac = contr.sum))
 summary(model3)
-# hard to compute a bayes factor for the mixed-effects model, so we'll do it for the simpler model (where all of each subject's choices are averaged together)
-model3.bf = generalTestBF(stay2 ~ stay1.fac * last.reinf,
-        data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare') %>% group_by(stay1.fac, last.reinf, subject) %>% summarize(stay2 = mean(stay2)),
-        whichModels = "top")
-summary(model3.bf)
+model3.null <- glmer(stay2 ~ stay1.fac + last.reinf + (1 + stay1.fac * last.reinf | subject), family = binomial,
+                data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'),
+                contrasts = list(stay1.fac = contr.sum))
+exp((BIC(model3) - BIC(model3.null)) / 2)
 
 # Test 4: interaction between 2 & 3 ----------------------------------------------------
 
@@ -212,11 +212,26 @@ summary(model5)
 model6 = lmer(rt2 ~ stay1.fac.num * stay2.fac.num * last.reinf + (stay1.fac.num * stay2.fac.num * last.reinf || subject),
               data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'))
 summary(model6)
+model6.null = lmer(rt2 ~ stay1.fac.num * stay2.fac.num + stay1.fac.num * last.reinf + stay2.fac.num * last.reinf + (stay1.fac.num * stay2.fac.num * last.reinf || subject),
+                   data = df.crits %>% filter(sameS2 == 'Different S2' & last.common == 'Rare'))
+summary(model6.null)
+exp((BIC(model6) - BIC(model6.null)) / 2)
 
 # Test interaction
 model7 = lmer(rt2 ~ stay1.fac.num * stay2.fac.num * last.reinf * last.common.num + (stay1.fac.num * stay2.fac.num * last.reinf * last.common.num || subject),
               data = df.crits %>% filter(sameS2 == 'Different S2'))
 summary(model7)
+
+# Show RT distribution
+ggplot(df.crits, aes(x = rt2, group = stay1.fac, fill = stay1.fac)) +
+  geom_histogram(alpha = .6, position = 'identity') +
+  xlab('') + ylab('') +
+  scale_y_continuous(labels = NULL, breaks = NULL) +
+  scale_x_continuous(breaks = c(0,1000,2000), limits = c(0,2200)) +
+  facet_wrap(~ last.common + last.reinf.fac) +
+  theme(strip.text.x = element_blank(), legend.position = 'none') +
+  scale_fill_manual(values = c("Same action1" = "#3D9970", "Different action1" = "brown"))
+
 
 
 
