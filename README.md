@@ -1,6 +1,6 @@
 # Model-free RL or action sequences?
 
-This repository contains the data and code for "Model-free RL or action sequences?", by Adam Morris & Fiery Cushman.
+This repository contains the data and code for ["Model-free RL or action sequences?"](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2019.02892/full), by Adam Morris & Fiery Cushman.
 
 "expt1" and "expt2" contain the data and analysis code for Experiments 1 and 2, respectively.
 
